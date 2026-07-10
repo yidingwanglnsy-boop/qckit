@@ -1,0 +1,29 @@
+:root {
+  --qc-bg: #f5f7fa;
+  --qc-primary: #2563eb;
+  --qc-core: #ef4444;
+  --qc-key: #f59e0b;
+  --qc-conduct: #3b82f6;
+  --qc-normal: #9ca3af;
+}
+html, body, #app { height: 100%; margin: 0; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--qc-bg); }
+
+.qc-hero {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: #fff; padding: 28px 32px; border-radius: 14px; margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(37,99,235,.18);
+}
+.qc-hero h1 { margin: 0 0 8px; font-size: 26px; font-weight: 600; }
+.qc-hero p { margin: 0; opacity: .85; font-size: 14px; }
+
+.qc-card {
+  background: #fff; border-radius: 12px; padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05); margin-bottom: 16px;
+}
+.qc-tag-core    { background: #fee2e2; color: #b91c1c; }
+.qc-tag-key     { background: #fef3c7; color: #b45309; }
+.qc-tag-conduct { background: #dbeafe; color: #1d4ed8; }
+.qc-tag-normal  { background: #f3f4f6; color: #4b5563; }
+.qc-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.qc-legend span { padding: 2px 10px; border-radius: 999px; }

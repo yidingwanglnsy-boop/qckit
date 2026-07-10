@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  qckit:
+    build: .
+    image: qckit:latest
+    container_name: qckit
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - QCKIT_LLM_BASE_URL=${QCKIT_LLM_BASE_URL:-https://api.openai.com/v1}
+      - QCKIT_LLM_API_KEY=${QCKIT_LLM_API_KEY:-}
+      - QCKIT_LLM_MODEL=${QCKIT_LLM_MODEL:-gpt-4o-mini}
+    volumes:
+      - ./data:/root/.qckit
