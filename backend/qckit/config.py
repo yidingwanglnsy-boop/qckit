@@ -18,7 +18,7 @@ class LLMConfig(BaseModel):
     api_key: str = ""
     model: str = "gpt-4o-mini"
     temperature: float = 0.2
-    timeout: int = 120
+    timeout: int = 300
 
 
 class AppConfig(BaseModel):

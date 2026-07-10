@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-export const api = axios.create({ baseURL: '/api', timeout: 180000 })
+export const api = axios.create({ baseURL: '/api', timeout: 360000 })
 
 export const listTools    = () => api.get('/tools').then(r => r.data)
 export const getConfig    = () => api.get('/config').then(r => r.data)
