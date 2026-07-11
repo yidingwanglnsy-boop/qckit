@@ -80,6 +80,9 @@ const form = reactive({
 })
 
 async function doAnalyze (f) {
+  if (!f.topic?.trim()) {
+    ElMessage.warning('请填写分析主题'); throw new Error('invalid')
+  }
   const metrics = f.metrics_text.split(/[,，]/).map(s => s.trim()).filter(Boolean)
   const lower = f.lower_is_better_text.split(/[,，]/).map(s => s.trim()).filter(Boolean)
   const subjects = f.subjects_text.split('\n').map(line => {
@@ -89,6 +92,13 @@ async function doAnalyze (f) {
   }).filter(Boolean)
   if (metrics.length < 2 || subjects.length < 2) {
     ElMessage.warning('请填写至少 2 个指标和 2 个对象')
+    throw new Error('invalid')
+  }
+  // 每个对象的数值数应等于指标数
+  const bad = subjects.filter(s => s.values.length !== metrics.length
+                                    || s.values.some(v => !Number.isFinite(v)))
+  if (bad.length) {
+    ElMessage.warning(`「${bad[0].name}」的数值数与指标数不一致或非数字`)
     throw new Error('invalid')
   }
   return await analyzeMda({

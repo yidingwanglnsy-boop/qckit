@@ -13,6 +13,7 @@ import Matrix from './views/Matrix.vue'
 import Mda from './views/Mda.vue'
 import Pdpc from './views/Pdpc.vue'
 import Arrow from './views/Arrow.vue'
+import History from './views/History.vue'
 import Brand from './views/Brand.vue'
 import Settings from './views/Settings.vue'
 
@@ -33,6 +34,7 @@ export default createRouter({
     { path: '/tools/mda',       component: Mda       },
     { path: '/tools/pdpc',      component: Pdpc      },
     { path: '/tools/arrow',     component: Arrow     },
+    { path: '/history',  component: History },
     { path: '/brand',    component: Brand },
     { path: '/settings', component: Settings }
   ]

@@ -30,21 +30,29 @@ api.interceptors.response.use(
         `请求 ${url} 未收到响应。请检查后端服务是否已启动（默认 http://localhost:8000）。`)
       return Promise.reject(err)
     }
-    // HTTP 错误
+    // HTTP 错误 - 优先解析结构化 detail (error_code + message + hint)
     const status = err.response.status
-    const detail = err.response.data?.detail || err.response.data?.message ||
-                   err.response.statusText || '未知错误'
-    if (status === 401 || status === 403) {
-      notify('error', 'AI 密钥无效或未授权',
-        `${detail}\n\n请前往【设置】重新配置 API Key。`)
-    } else if (status === 429) {
-      notify('warning', 'AI 服务限流',
-        `${detail}\n\n短时间请求过多。稍等 10-30 秒后重试。`)
+    const d = err.response.data?.detail
+    const structured = d && typeof d === 'object' && d.message
+    const body = structured
+      ? `${d.message}${d.hint ? '\n\n💡 ' + d.hint : ''}`
+      : String(d || err.response.data?.message || err.response.statusText || '未知错误')
+    const code = structured ? d.error_code : ''
+
+    if (code === 'LLM_AUTH' || status === 401 || status === 403) {
+      notify('error', 'AI 密钥无效或未授权', body)
+    } else if (code === 'LLM_RATE_LIMIT' || status === 429) {
+      notify('warning', 'AI 服务限流', body)
+    } else if (code === 'LLM_TIMEOUT' || status === 504) {
+      notify('warning', 'AI 响应超时', body)
+    } else if (code === 'LLM_UNREACHABLE' || status === 503) {
+      notify('error', '无法连接 AI 服务', body)
+    } else if (code === 'LLM_BAD_JSON' || status === 502) {
+      notify('warning', 'AI 返回格式异常', body)
     } else if (status >= 500) {
-      notify('error', '后端服务错误',
-        `${detail}\n\n如反复出现，请查看后端日志 (uvicorn stdout)。`)
+      notify('error', '后端服务错误', `${body}\n\n如反复出现，请查看后端日志。`)
     } else {
-      notify('error', `请求失败 (${status})`, String(detail))
+      notify('error', `请求失败 (${status})`, body)
     }
     return Promise.reject(err)
   }

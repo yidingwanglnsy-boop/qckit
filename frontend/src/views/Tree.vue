@@ -62,6 +62,7 @@
 
 <script setup>
 import { reactive, ref, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import ToolPage from '../components/ToolPage.vue'
 import { analyzeTree } from '../api'
 
@@ -76,6 +77,10 @@ watch(() => form.hints, v => {
 })
 
 async function doAnalyze (f) {
+  if (!f.topic?.trim()) {
+    ElMessage.warning('请填写顶层目标')
+    throw new Error('invalid')
+  }
   return await analyzeTree({
     topic: f.topic, context: f.context || null,
     layers: f.layers, hints: f.hints,

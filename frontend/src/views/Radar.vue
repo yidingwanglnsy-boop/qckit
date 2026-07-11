@@ -197,6 +197,7 @@
               </span>
             </template>
           </div>
+          <NextStepBar :from="'radar'" :topic="topic || ''" />
         </div>
       </el-col>
     </el-row>
@@ -204,11 +205,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, onMounted, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { analyzeRadar, downloadPptx } from '../api'
 import ToolkitBar from '../components/ToolkitBar.vue'
+import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('')
@@ -429,6 +432,17 @@ window.addEventListener('resize', () => chart?.resize())
 onBeforeUnmount(() => {
   clearInterval(progressTimer); clearInterval(elapsedTimer)
   chart?.dispose()
+})
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    form.topic = topic.value
+    ElMessage.info('已带入上一步的主题')
+  }
 })
 </script>
 

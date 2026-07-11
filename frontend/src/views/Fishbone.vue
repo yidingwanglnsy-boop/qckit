@@ -177,6 +177,7 @@
               </ul>
             </div>
           </div>
+          <NextStepBar :from="'fishbone'" :topic="topic || ''" />
         </div>
       </el-col>
     </el-row>
@@ -185,9 +186,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeFishbone, downloadPptx, getBrand } from '../api'
 import ToolkitBar from '../components/ToolkitBar.vue'
+import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('')
@@ -448,6 +451,17 @@ async function exportPptx() {
 }
 
 onBeforeUnmount(() => { clearInterval(progressTimer); clearInterval(elapsedTimer) })
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    form.topic = topic.value
+    ElMessage.info('已带入上一步的主题')
+  }
+})
 </script>
 
 <style scoped>

@@ -80,8 +80,9 @@ class BrandFile(BaseModel):
             data = yaml.safe_load(BRAND_FILE.read_text(encoding="utf-8")) or {}
             try:
                 return cls(**data)
-            except Exception:
-                pass
+            except (TypeError, ValueError) as e:
+                import logging
+                logging.getLogger(__name__).warning("brand 反序列化失败, 用默认: %s", e)
         return cls()
 
     def save(self) -> None:

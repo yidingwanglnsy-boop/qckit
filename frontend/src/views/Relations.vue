@@ -164,6 +164,7 @@
               </el-table>
             </el-tab-pane>
           </el-tabs>
+          <NextStepBar :from="'relations'" :topic="topic || ''" />
         </div>
         </transition>
       </el-col>
@@ -178,7 +179,10 @@ import cytoscape from 'cytoscape'
 import fcose from 'cytoscape-fcose'
 import { analyzeRelations, downloadPptx } from '../api'
 import ToolkitBar from '../components/ToolkitBar.vue'
+import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
 cytoscape.use(fcose)
 
@@ -377,6 +381,17 @@ async function exportPptx() {
 onBeforeUnmount(() => {
   clearInterval(progressTimer); clearInterval(elapsedTimer)
   if (cy) cy.destroy()
+})
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    form.topic = topic.value
+    ElMessage.info('已带入上一步的主题')
+  }
 })
 </script>
 

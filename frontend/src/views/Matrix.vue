@@ -85,6 +85,7 @@
 
 <script setup>
 import { reactive } from 'vue'
+import { ElMessage } from 'element-plus'
 import ToolPage from '../components/ToolPage.vue'
 import { analyzeMatrix } from '../api'
 
@@ -94,8 +95,17 @@ const form = reactive({
 })
 
 async function doAnalyze (f) {
+  if (!f.topic?.trim()) {
+    ElMessage.warning('请填写矩阵主题'); throw new Error('invalid')
+  }
   const rows = f.rows_text.split('\n').map(s => s.trim()).filter(Boolean)
   const cols = f.cols_text.split('\n').map(s => s.trim()).filter(Boolean)
+  if (rows.length < 2 || cols.length < 2) {
+    ElMessage.warning('行/列各至少填 2 条'); throw new Error('invalid')
+  }
+  if (new Set(rows).size !== rows.length || new Set(cols).size !== cols.length) {
+    ElMessage.warning('行/列有重复条目'); throw new Error('invalid')
+  }
   return await analyzeMatrix({
     topic: f.topic, row_label: f.row_label, col_label: f.col_label,
     rows, cols, context: f.context || null,

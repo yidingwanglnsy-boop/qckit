@@ -128,6 +128,10 @@
       </div>
     </transition>
 
+    <div v-if="hasResult">
+      <NextStepBar :from="'w5h2'" :topic="topic || ''" />
+    </div>
+
     <!-- Excel 粘贴对话框 -->
     <el-dialog v-model="showPaste" title="从 Excel 粘贴" width="640px">
       <div style="color:#64748b;font-size:12px;margin-bottom:8px;">
@@ -146,10 +150,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeW5H2, downloadPptx, downloadXlsx } from '../api'
 import ToolkitBar from '../components/ToolkitBar.vue'
+import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const cols = ['why','what','where','when','who','how','how_much']
@@ -350,6 +356,17 @@ async function exportXlsx() {
 
 onBeforeUnmount(() => {
   clearInterval(progressTimer); clearInterval(elapsedTimer)
+})
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    form.topic = topic.value
+    ElMessage.info('已带入上一步的主题')
+  }
 })
 </script>
 

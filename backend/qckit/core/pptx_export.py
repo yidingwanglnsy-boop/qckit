@@ -609,8 +609,8 @@ def build_pareto_pptx(payload: dict[str, Any]) -> io.BytesIO:
     try:
         from pptx.enum.dml import MSO_LINE_DASH_STYLE
         ln.line.dash_style = MSO_LINE_DASH_STYLE.DASH
-    except Exception:
-        pass
+    except (ImportError, AttributeError):
+        pass  # 老版 pptx 没这个枚举, 用实线降级
     tb_th = slide.shapes.add_textbox(px + pw - Inches(0.7), y_th - Inches(0.32),
                                      Inches(0.7), Inches(0.25))
     _set_text(tb_th.text_frame, f"{threshold:g}%", size=9, bold=True, color="B91C1C",

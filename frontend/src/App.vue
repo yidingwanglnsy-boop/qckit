@@ -70,6 +70,9 @@
           <template #title>
             <el-icon><Setting /></el-icon><span>配置</span>
           </template>
+          <el-menu-item index="/history">
+            <el-icon><Clock /></el-icon><template #title>历史记录</template>
+          </el-menu-item>
           <el-menu-item index="/brand">
             <el-icon><Brush /></el-icon><template #title>品牌主题</template>
           </el-menu-item>

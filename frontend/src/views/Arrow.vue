@@ -122,6 +122,9 @@ const form = reactive({
 })
 
 async function doAnalyze (f) {
+  if (!f.topic?.trim()) {
+    ElMessage.warning('请填写项目主题'); throw new Error('invalid')
+  }
   const tasks = f.tasks_text.split('\n').map(line => {
     const parts = line.split(/[,，]/).map(s => s.trim())
     if (!parts[0]) return null
@@ -134,6 +137,37 @@ async function doAnalyze (f) {
   }).filter(Boolean)
   if (tasks.length < 2) {
     ElMessage.warning('请至少填写 2 个任务')
+    throw new Error('invalid')
+  }
+  // 重名检测
+  const names = tasks.map(t => t.name)
+  if (new Set(names).size !== names.length) {
+    ElMessage.warning('任务名有重复'); throw new Error('invalid')
+  }
+  // 依赖存在性 + 简单成环检测 (DFS)
+  const nameSet = new Set(names)
+  const orphans = []
+  for (const t of tasks) {
+    for (const p of (t.predecessors || []))
+      if (!nameSet.has(p)) orphans.push(`${t.name}→${p}`)
+  }
+  if (orphans.length) {
+    ElMessage.warning(`依赖任务不存在: ${orphans.slice(0,3).join(', ')}`)
+    throw new Error('invalid')
+  }
+  const graph = Object.fromEntries(tasks.map(t => [t.name, t.predecessors || []]))
+  const WHITE=0, GRAY=1, BLACK=2
+  const color = Object.fromEntries(names.map(n => [n, WHITE]))
+  function dfs (n, path) {
+    if (color[n] === GRAY) throw new Error('cycle: ' + [...path, n].join('→'))
+    if (color[n] === BLACK) return
+    color[n] = GRAY
+    for (const p of graph[n]) dfs(p, [...path, n])
+    color[n] = BLACK
+  }
+  try { for (const n of names) dfs(n, []) }
+  catch (e) {
+    ElMessage.warning(`依赖成环: ${e.message.replace('cycle: ', '')}`)
     throw new Error('invalid')
   }
   return await analyzeArrow({

@@ -56,7 +56,10 @@
           <div v-if="!result" class="qc-empty">
             💡 输入内容后点击「AI 分析」查看结果
           </div>
-          <slot v-else name="results" :result="result" />
+          <template v-else>
+            <slot name="results" :result="result" />
+            <NextStepBar :from="toolKey" :topic="form.topic || ''" />
+          </template>
         </div>
       </el-col>
     </el-row>
@@ -64,11 +67,13 @@
 </template>
 
 <script setup>
-import { ref, watch, reactive as _r } from 'vue'
+import { ref, watch, onMounted, reactive as _r } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Document, Download, MagicStick } from '@element-plus/icons-vue'
 import { downloadPptx } from '../api'
 import ToolkitBar from './ToolkitBar.vue'
+import NextStepBar from './NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const props = defineProps({
@@ -86,6 +91,26 @@ const loading = ref(false)
 const pptxLoading = ref(false)
 const result = ref(null)
 const toolkit = useToolkit(props.toolKey, props.form)
+const route = useRoute()
+
+// 优先级: sessionStorage 恢复 > URL query topic > 空
+onMounted(() => {
+  const restoreKey = 'qckit.restore.' + props.toolKey
+  const raw = sessionStorage.getItem(restoreKey)
+  if (raw) {
+    try {
+      Object.assign(props.form, JSON.parse(raw))
+      sessionStorage.removeItem(restoreKey)
+      ElMessage.success('已从历史记录恢复')
+      return
+    } catch {}
+  }
+  const qtopic = route.query.topic
+  if (qtopic && !props.form.topic) {
+    props.form.topic = String(qtopic)
+    ElMessage.info('已带入上一步的主题，可直接分析')
+  }
+})
 
 async function doAnalyze () {
   loading.value = true

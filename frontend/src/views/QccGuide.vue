@@ -110,6 +110,7 @@
             </div>
           </div>
         </div>
+        <NextStepBar v-if="hasResult" :from="'qcc_guide'" :topic="topic || ''" />
       </el-col>
     </el-row>
   </div>
@@ -117,8 +118,10 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeQccGuide, getBrand } from '../api'
+import NextStepBar from '../components/NextStepBar.vue'
 
 const topic = ref('')
 const industry = ref('')
@@ -201,6 +204,16 @@ function exportMd() {
 }
 
 onBeforeUnmount(() => { clearInterval(progressTimer); clearInterval(elapsedTimer) })
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    ElMessage.info('已带入上一步的主题')
+  }
+})
 </script>
 
 <style scoped>

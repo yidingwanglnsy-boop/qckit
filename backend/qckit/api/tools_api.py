@@ -35,11 +35,62 @@ def list_tools() -> list[dict]:
     return [t.__dict__ for t in all_tools()]
 
 
+import logging
+from openai import APIConnectionError, APITimeoutError, AuthenticationError, RateLimitError
+
+logger = logging.getLogger("qckit.tools")
+
+
 def _run(fn, req):
+    """分类错误 + 结构化返回, 前端可据 error_code 精细化 UI."""
     try:
         return fn(req)
+    except APITimeoutError as e:
+        logger.warning("LLM timeout: %s", e)
+        raise HTTPException(504, detail={
+            "error_code": "LLM_TIMEOUT",
+            "message": "AI 响应超时。请稍后重试，或缩小输入范围。",
+            "hint": "若经常超时可在「设置」里调大 timeout。",
+        })
+    except APIConnectionError as e:
+        logger.warning("LLM connect fail: %s", e)
+        raise HTTPException(503, detail={
+            "error_code": "LLM_UNREACHABLE",
+            "message": "无法连接 AI 服务。请检查网络或 base_url。",
+            "hint": "打开「设置」核对 base_url。",
+        })
+    except AuthenticationError as e:
+        logger.warning("LLM auth fail: %s", e)
+        raise HTTPException(401, detail={
+            "error_code": "LLM_AUTH",
+            "message": "API Key 无效或过期。",
+            "hint": "去「设置」重新填写 api_key。",
+        })
+    except RateLimitError as e:
+        logger.warning("LLM rate limit: %s", e)
+        raise HTTPException(429, detail={
+            "error_code": "LLM_RATE_LIMIT",
+            "message": "AI 服务限流，稍后再试。",
+            "hint": "换个模型或等 30s 再试。",
+        })
+    except ValueError as e:
+        # _safe_json 抛的
+        logger.warning("LLM bad JSON: %s", str(e)[:300])
+        raise HTTPException(502, detail={
+            "error_code": "LLM_BAD_JSON",
+            "message": "AI 返回格式异常，无法解析。",
+            "hint": "点「重试」重新生成；若持续失败可换个模型。诊断日志已保存到 ~/.qckit/last_llm_debug.txt",
+            "raw_preview": str(e)[:400],
+        })
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"LLM 分析失败: {e}") from e
+        logger.exception("Tool run failed")
+        raise HTTPException(500, detail={
+            "error_code": "INTERNAL",
+            "message": f"分析失败: {type(e).__name__}",
+            "hint": "查看后端日志 ~/.qckit/qckit.log",
+        })
 
 
 def _pptx_response(buf, filename: str) -> StreamingResponse:

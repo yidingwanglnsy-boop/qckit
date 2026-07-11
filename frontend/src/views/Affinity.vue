@@ -165,6 +165,7 @@
               </div>
             </div>
           </div>
+          <NextStepBar v-if="groups.length" :from="'affinity'" :topic="topic || ''" />
         </div>
       </el-col>
     </el-row>
@@ -172,10 +173,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, onMounted, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { analyzeAffinity, downloadPptx } from '../api'
 import ToolkitBar from '../components/ToolkitBar.vue'
+import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('车间班组会议改善提案')
@@ -370,6 +373,17 @@ async function exportPptx() {
 }
 
 onBeforeUnmount(() => { clearInterval(progressTimer); clearInterval(elapsedTimer) })
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    form.topic = topic.value
+    ElMessage.info('已带入上一步的主题')
+  }
+})
 </script>
 
 <style scoped>

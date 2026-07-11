@@ -142,6 +142,10 @@
       </div>
     </transition>
 
+    <div v-if="hasResult">
+      <NextStepBar :from="'rca'" :topic="topic || ''" />
+    </div>
+
     <el-dialog v-model="showPaste" title="从 Excel 粘贴" width="720px">
       <div style="color:#64748b;font-size:12px;margin-bottom:8px;">
         列顺序（用 Tab 分隔）：<code>症结 | 末端原因 | 确认内容 | 确认方法 | 确认结果 | 责任人 | 完成时间 | 是否要因</code><br>
@@ -159,10 +163,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeRca, downloadPptx, downloadXlsx } from '../api'
 import ToolkitBar from '../components/ToolkitBar.vue'
+import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const AI_FIELDS = ['content','method','result','is_key']
@@ -396,6 +402,17 @@ async function exportXlsx() {
 
 onBeforeUnmount(() => {
   clearInterval(progressTimer); clearInterval(elapsedTimer)
+})
+
+// 从 URL query 自动填入 topic (工具间跳转时透传)
+const route = useRoute()
+onMounted(() => {
+  const q = route.query.topic
+  if (q && !topic.value) {
+    topic.value = String(q)
+    form.topic = topic.value
+    ElMessage.info('已带入上一步的主题')
+  }
 })
 </script>
 

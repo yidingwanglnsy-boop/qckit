@@ -73,6 +73,7 @@
 
 <script setup>
 import { reactive } from 'vue'
+import { ElMessage } from 'element-plus'
 import ToolPage from '../components/ToolPage.vue'
 import { analyzePdpc } from '../api'
 
@@ -81,6 +82,9 @@ const form = reactive({
 })
 
 async function doAnalyze (f) {
+  if (!f.topic?.trim()) {
+    ElMessage.warning('请填写目标事件'); throw new Error('invalid')
+  }
   const steps = f.steps_text.split('\n').map(s => s.trim()).filter(Boolean)
   const risk_dims = f.risk_dims_text.split(/[,，]/).map(s => s.trim()).filter(Boolean)
   return await analyzePdpc({
