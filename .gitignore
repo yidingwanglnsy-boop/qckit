@@ -8,3 +8,7 @@ backend/static/
 dist/
 .DS_Store
 *.egg-info
+
+# QCC 分析临时产物
+rca-*.pptx
+/tmp/qckit-*/
