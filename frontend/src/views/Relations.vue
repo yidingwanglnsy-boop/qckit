@@ -178,6 +178,7 @@ import { ElMessage } from 'element-plus'
 import cytoscape from 'cytoscape'
 import fcose from 'cytoscape-fcose'
 import { analyzeRelations, downloadPptx } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import ToolkitBar from '../components/ToolkitBar.vue'
 import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
@@ -268,6 +269,7 @@ async function run() {
     stageIdx.value = 2; progress.value = 92
     result.value = resp
     toolkit.saveHistory(resp, { topic: topic.value, raw_causes: nodesText.value, context: context.value })
+    await tryAttachToProject('relations', { topic: topic.value, raw_causes: nodesText.value, context: context.value }, resp)
     await nextTick()
     render()
     stopProgress(true)

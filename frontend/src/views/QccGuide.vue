@@ -121,6 +121,7 @@ import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeQccGuide, getBrand } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import NextStepBar from '../components/NextStepBar.vue'
 
 const topic = ref('')
@@ -165,6 +166,10 @@ async function run() {
     stages.value = resp.stages
     overview.value = resp.overview
     stopProgress()
+    await tryAttachToProject('qcc_guide', {
+      topic: topic.value, industry: industry.value,
+      experience: experience.value, focus: focus.value,
+    }, resp)
     ElMessage.success('已生成')
   } catch (e) {
     stopProgress()

@@ -154,6 +154,7 @@ import { ref, reactive, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeW5H2, downloadPptx, downloadXlsx } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import ToolkitBar from '../components/ToolkitBar.vue'
 import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
@@ -294,6 +295,7 @@ async function run() {
     }
     reasoning.value = resp.reasoning || ''
     toolkit.saveHistory(resp, { topic: topic.value, context: context.value })
+    await tryAttachToProject('w5h2', { topic: topic.value, context: context.value }, resp)
     if (useLlm.value) stopProgress()
     const total = Object.values(inferredMap).reduce((a, s) => a + s.size, 0)
     ElMessage.success(total ? `AI 补全 ${total} 个字段` : '保存完成')

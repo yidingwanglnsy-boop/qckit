@@ -177,6 +177,7 @@ import { ref, reactive, computed, onBeforeUnmount, onMounted, nextTick, watch } 
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { analyzeAffinity, downloadPptx } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import ToolkitBar from '../components/ToolkitBar.vue'
 import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
@@ -270,6 +271,7 @@ async function run() {
     insights.value = resp.insights || ''
     recommendations.value = resp.recommendations || []
     toolkit.saveHistory(resp, { topic: topic.value, context: context.value, raw_items: itemsText.value })
+    await tryAttachToProject('affinity', { topic: topic.value, context: context.value, raw_items: itemsText.value }, resp)
     await nextTick()
     stopProgress(true)
     ElMessage.success(`分析完成，${groups.value.length} 组 / 用时 ${elapsed.value}s`)

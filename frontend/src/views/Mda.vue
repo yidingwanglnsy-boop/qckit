@@ -21,6 +21,11 @@
           </div>
         </el-form-item>
         <el-form-item label="对象数据（CSV 格式：对象名, v1, v2, ...）">
+          <FileImporter style="margin-bottom:6px;"
+            hint="首行=表头(对象, 指标1, 指标2...), 数据行=对象+各指标值"
+            template-name="mda"
+            :template="[['对象','质量','交期','价格','服务'],['供应商A',9,7,8,9],['供应商B',8,9,7,7],['供应商C',7,8,9,8]]"
+            @parsed="onImport" />
           <el-input v-model="form.subjects_text" type="textarea" :rows="6"
                     placeholder="供应商A, 9, 7, 8, 9, 8&#10;供应商B, 8, 9, 7, 7, 9" />
         </el-form-item>
@@ -72,12 +77,28 @@
 <script setup>
 import { reactive } from 'vue'
 import ToolPage from '../components/ToolPage.vue'
+import FileImporter from '../components/FileImporter.vue'
 import { analyzeMda } from '../api'
 import { ElMessage } from 'element-plus'
 
 const form = reactive({
   topic: '', metrics_text: '', lower_is_better_text: '', subjects_text: '',
 })
+
+function onImport ({ rows }) {
+  const header = rows[0] || []
+  const metrics = header.slice(1).map(x => String(x || '').trim()).filter(Boolean)
+  if (metrics.length < 2) { ElMessage.warning('至少 2 个指标'); return }
+  const lines = rows.slice(1).map(r => {
+    const name = String(r[0] ?? '').trim()
+    if (!name) return null
+    const vals = metrics.map((_, i) => Number(r[i + 1] ?? 0) || 0)
+    return `${name}, ${vals.join(', ')}`
+  }).filter(Boolean)
+  if (!lines.length) { ElMessage.warning('未识别到有效数据'); return }
+  form.metrics_text = metrics.join(', ')
+  form.subjects_text = lines.join('\n')
+}
 
 async function doAnalyze (f) {
   if (!f.topic?.trim()) {

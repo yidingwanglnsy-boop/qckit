@@ -189,6 +189,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { analyzeFishbone, downloadPptx, getBrand } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import ToolkitBar from '../components/ToolkitBar.vue'
 import NextStepBar from '../components/NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
@@ -409,6 +410,12 @@ async function run() {
       layers: layers.value,
       categories: resp.categories || [],
     })
+    await tryAttachToProject('fishbone', {
+      topic: topic.value,
+      statement: context.value,
+      layers: layers.value,
+      categories: resp.categories || [],
+    }, resp)
     stopProgress()
     ElMessage.success('已生成')
   } catch (e) {

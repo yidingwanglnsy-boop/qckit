@@ -51,6 +51,14 @@
             </el-row>
 
             <el-form-item>
+              <FileImporter
+                hint="首行=表头(第一列'对象',后面维度名), 数据行=对象+各维度分值"
+                template-name="radar"
+                :template="[['对象','质量','交期','价格','服务'],['供应商A',9,7,8,6],['供应商B',8,9,7,7]]"
+                @parsed="onImport" />
+            </el-form-item>
+
+            <el-form-item>
               <template #label>
                 <span>维度</span>
                 <span style="color:#9ca3af;font-size:12px;margin-left:6px;">
@@ -210,8 +218,10 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { analyzeRadar, downloadPptx } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import ToolkitBar from '../components/ToolkitBar.vue'
 import NextStepBar from '../components/NextStepBar.vue'
+import FileImporter from '../components/FileImporter.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('')
@@ -221,6 +231,22 @@ const dimensions = ref([])
 const entities = ref([
   { name: '对象 1', scores: [] },
 ])
+
+function onImport ({ rows }) {
+  // 首行: ['对象', dim1, dim2, ...]
+  const header = rows[0] || []
+  const dims = header.slice(1).map(x => String(x || '').trim()).filter(Boolean)
+  if (dims.length < 3) {
+    ElMessage.warning('至少 3 个维度'); return
+  }
+  const ents = rows.slice(1).map(r => ({
+    name: String(r[0] ?? '').trim(),
+    scores: dims.map((_, i) => Number(r[i + 1] ?? 0) || 0),
+  })).filter(x => x.name)
+  if (!ents.length) { ElMessage.warning('未识别到有效数据'); return }
+  dimensions.value = dims
+  entities.value = ents
+}
 const newDim = ref('')
 const useLlm = ref(false)
 const context = ref('')
@@ -329,6 +355,11 @@ async function run() {
       subject: valid[0]?.name || '',
       dimensions: dimensions.value.map((n, i) => ({ name: n, value: valid[0]?.scores[i] ?? 0 })),
     })
+    await tryAttachToProject('radar', {
+      topic: topic.value,
+      subject: valid[0]?.name || '',
+      dimensions: dimensions.value.map((n, i) => ({ name: n, value: valid[0]?.scores[i] ?? 0 })),
+    }, resp)
     await nextTick()
     renderChart()
     if (useLlm.value) stopProgress()

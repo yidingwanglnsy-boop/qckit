@@ -60,6 +60,11 @@
                   {{ items.length }} 项，可编辑
                 </span>
               </template>
+              <FileImporter class="fi-inline"
+                hint="首列=项目名, 次列=数值"
+                template-name="pareto"
+                :template="[['项目名','频次'],['气孔',45],['未熔透',30],['裂纹',15],['其它',10]]"
+                @parsed="onImport" />
               <div class="items-editor">
                 <div v-for="(it, i) in items" :key="i" class="item-row">
                   <el-input v-model="it.name" size="small" placeholder="项目名"
@@ -191,8 +196,10 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { analyzePareto, downloadPptx } from '../api'
+import { tryAttachToProject } from '../composables/useAttach'
 import ToolkitBar from '../components/ToolkitBar.vue'
 import NextStepBar from '../components/NextStepBar.vue'
+import FileImporter from '../components/FileImporter.vue'
 import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('注塑车间不良类型分布')
@@ -201,6 +208,16 @@ const threshold = ref(80)
 const useLlm = ref(false)
 const context = ref('')
 const items = ref([])
+
+function onImport ({ rows }) {
+  // 跳过表头, 首列名 + 次列数值
+  const parsed = rows.slice(1).map(r => ({
+    name: String(r[0] ?? '').trim(),
+    value: Number(r[1] ?? 0) || 0,
+  })).filter(x => x.name)
+  if (!parsed.length) { ElMessage.warning('未识别到有效数据'); return }
+  items.value = parsed
+}
 const loading = ref(false)
 const result = ref(null)
 const chartEl = ref(null)
@@ -285,6 +302,10 @@ async function run() {
       topic: topic.value, metric: metric.value, threshold: threshold.value,
       raw_data: clean.map(i => `${i.name},${i.value}`).join('\n'),
     })
+    await tryAttachToProject('pareto', {
+      topic: topic.value, metric: metric.value, threshold: threshold.value,
+      raw_data: clean.map(i => `${i.name},${i.value}`).join('\n'),
+    }, resp)
     await nextTick()
     renderChart()
     if (useLlm.value) stopProgress(true)
