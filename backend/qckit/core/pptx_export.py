@@ -645,82 +645,96 @@ def build_radar_pptx(payload: dict[str, Any]) -> io.BytesIO:
 
 
 
+
+
 # ─────────────────────────────────────────────────────────
-# 5W2H - Why 居中, 其他 6 项环绕放射
+# 5W2H 表格 - 多根因批量, 每行一条 + AI 补全字段黄底
 # ─────────────────────────────────────────────────────────
 def build_w5h2_pptx(payload: dict[str, Any]) -> io.BytesIO:
     topic = payload.get("topic", "5W2H")
-    inferred = set(payload.get("inferred", []))
+    rows = payload.get("rows", [])
     reasoning = payload.get("reasoning", "")
 
-    prs = _new_deck(f"5W2H · {topic}", "QCKit · 5W2H 分析法")
+    prs = _new_deck(f"5W2H · {topic}", f"QCKit · 5W2H 分析 · {len(rows)} 条根因")
     slide = prs.slides[0]
 
-    # 中心 Why 卡 (红色, 突出根因)
-    cw, ch = Inches(4.2), Inches(1.9)
-    cx = (prs.slide_width - cw) / 2
-    cy = (prs.slide_height - ch) / 2
-    why_card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, cx, cy, cw, ch)
-    why_card.fill.solid(); why_card.fill.fore_color.rgb = _rgb("DC2626")
-    why_card.line.color.rgb = _rgb("991B1B"); why_card.line.width = Pt(2.5)
-    tf = why_card.text_frame
-    tf.word_wrap = True
-    tf.margin_left = tf.margin_right = Inches(0.2)
-    tf.margin_top = Inches(0.15)
-    _set_text(tf, "❓ Why · 根本原因", size=13, bold=True, color="FEE2E2",
-              align=PP_ALIGN.CENTER)
-    p = tf.add_paragraph(); p.alignment = PP_ALIGN.CENTER
-    p.space_before = Pt(6)
-    r = p.add_run(); r.text = payload.get("why", "")
-    r.font.name = FONT; r.font.size = Pt(14); r.font.bold = True
-    r.font.color.rgb = _rgb("FFFFFF")
+    if not rows:
+        buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
 
-    # 6 个外围卡片位置: 上左/上右/中左/中右/下左/下右
-    W, H = Inches(3.8), Inches(1.75)
-    slots = [
-        ("what",     Inches(0.4),                  Inches(0.9),
-         "❔ What",   "问题现象",     "0284C7"),
-        ("where",    prs.slide_width - W - Inches(0.4), Inches(0.9),
-         "📍 Where",  "地点/环节",   "059669"),
-        ("who",      Inches(0.4),                  Inches(2.85),
-         "👤 Who",    "责任人",       "7C3AED"),
-        ("when",     prs.slide_width - W - Inches(0.4), Inches(2.85),
-         "⏰ When",   "时间节点",     "DB2777"),
-        ("how",      Inches(0.4),                  Inches(4.8),
-         "🛠 How",    "对策/措施",   "0891B2"),
-        ("how_much", prs.slide_width - W - Inches(0.4), Inches(4.8),
-         "💰 How Much","成本/目标",   "F59E0B"),
-    ]
+    headers = ["#", "Why 根因", "What", "Where", "When", "Who", "How", "How Much"]
+    keys = ["_idx", "why", "what", "where", "when", "who", "how", "how_much"]
+    col_widths = [0.4, 2.6, 1.8, 1.4, 1.2, 1.2, 2.2, 1.5]  # inches, 合计 12.3
 
-    for field, x, y, title, sub, color in slots:
-        val = payload.get(field, "") or "(未填)"
-        is_ai = field in inferred
-        card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, W, H)
-        card.fill.solid()
-        card.fill.fore_color.rgb = _rgb("FFFBEB" if is_ai else "F8FAFC")
-        card.line.color.rgb = _rgb(color); card.line.width = Pt(1.5)
-        tf = card.text_frame
-        tf.word_wrap = True
-        tf.margin_left = tf.margin_right = Inches(0.15)
-        tf.margin_top = Inches(0.1)
-        # 标题
-        _set_text(tf, f"{title}  ·  {sub}", size=11, bold=True,
-                  color=color, align=PP_ALIGN.LEFT)
-        # AI 补全标记
-        if is_ai:
-            p_tag = tf.add_paragraph(); p_tag.alignment = PP_ALIGN.LEFT
-            r_tag = p_tag.add_run()
-            r_tag.text = "🤖 AI 推理补全"
-            r_tag.font.name = FONT; r_tag.font.size = Pt(8)
-            r_tag.font.color.rgb = _rgb("B45309"); r_tag.font.italic = True
-        # 内容
-        p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT
-        p.space_before = Pt(4)
-        r = p.add_run(); r.text = val
-        r.font.name = FONT; r.font.size = Pt(12)
-        r.font.color.rgb = _rgb("1F2937")
+    n_rows = len(rows) + 1  # +header
+    tx, ty = Inches(0.4), Inches(1.0)
+    tw = Inches(sum(col_widths))
+    # 行高：内容行随 rows 数量收缩
+    body_h = 5.5 / max(len(rows), 1)   # 内容区总高 5.5"
+    body_h = max(0.5, min(0.9, body_h))
+    header_h = 0.4
+    th = Inches(header_h + body_h * len(rows))
 
-    # 第二页: 推理逻辑 (若有)
+    table_shape = slide.shapes.add_table(n_rows, len(headers), tx, ty, tw, th)
+    table = table_shape.table
+
+    # 列宽
+    for i, w in enumerate(col_widths):
+        table.columns[i].width = Inches(w)
+    table.rows[0].height = Inches(header_h)
+    for i in range(1, n_rows):
+        table.rows[i].height = Inches(body_h)
+
+    # 表头
+    for i, h in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.fill.solid(); cell.fill.fore_color.rgb = _rgb("0F172A")
+        cell.margin_left = cell.margin_right = Inches(0.05)
+        cell.margin_top = cell.margin_bottom = Inches(0.03)
+        tf = cell.text_frame; tf.clear()
+        _set_text(tf, h, size=10, bold=True, color="FFFFFF", align=PP_ALIGN.CENTER)
+
+    # 数据行
+    for r_idx, row in enumerate(rows, 1):
+        inferred = set(row.get("inferred", []))
+        for c_idx, key in enumerate(keys):
+            cell = table.cell(r_idx, c_idx)
+            cell.margin_left = cell.margin_right = Inches(0.05)
+            cell.margin_top = cell.margin_bottom = Inches(0.03)
+
+            if key == "_idx":
+                val = str(r_idx)
+                color, bg = "334155", "F1F5F9"
+                bold = True
+            elif key == "why":
+                val = row.get("why", "")
+                color, bg = "991B1B", "FEF2F2"
+                bold = True
+            elif key in inferred:
+                val = row.get(key, "")
+                color, bg = "B45309", "FFFBEB"   # AI 补全: 黄底
+                bold = False
+            else:
+                val = row.get(key, "") or "—"
+                color, bg = "1F2937", "FFFFFF"
+                bold = False
+
+            cell.fill.solid(); cell.fill.fore_color.rgb = _rgb(bg)
+            tf = cell.text_frame; tf.clear(); tf.word_wrap = True
+            _set_text(tf, val, size=9, bold=bold, color=color,
+                      align=PP_ALIGN.LEFT if key != "_idx" else PP_ALIGN.CENTER)
+            # AI 标记
+            if key in inferred and val:
+                p = tf.add_paragraph()
+                r = p.add_run(); r.text = "🤖"
+                r.font.name = FONT; r.font.size = Pt(7)
+                r.font.color.rgb = _rgb("B45309")
+
+    # 图例
+    lg_y = ty + th + Inches(0.2)
+    _mk_legend_swatch(slide, Inches(0.4), lg_y, "FEF2F2", "Why 根因（必填）", "991B1B")
+    _mk_legend_swatch(slide, Inches(3.5), lg_y, "FFFBEB", "🤖 AI 联想补全", "B45309")
+
+    # 第二页: 推理逻辑
     if reasoning:
         slide2 = prs.slides.add_slide(prs.slide_layouts[6])
         hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
@@ -734,8 +748,7 @@ def build_w5h2_pptx(payload: dict[str, Any]) -> io.BytesIO:
 
         box = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
                                        Inches(0.5), Inches(1.0),
-                                       prs.slide_width - Inches(1.0),
-                                       Inches(5.8))
+                                       prs.slide_width - Inches(1.0), Inches(5.8))
         box.fill.solid(); box.fill.fore_color.rgb = _rgb("FFFBEB")
         box.line.color.rgb = _rgb("F59E0B"); box.line.width = Pt(2)
         tf = box.text_frame
@@ -746,6 +759,146 @@ def build_w5h2_pptx(payload: dict[str, Any]) -> io.BytesIO:
                   align=PP_ALIGN.LEFT)
         p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT
         p.space_before = Pt(8)
+        r = p.add_run(); r.text = reasoning
+        r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("451A03")
+
+    buf = io.BytesIO(); prs.save(buf); buf.seek(0)
+    return buf
+
+
+def _mk_legend_swatch(slide, x, y, bg, label, color):
+    sw = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, y, Inches(0.25), Inches(0.2))
+    sw.fill.solid(); sw.fill.fore_color.rgb = _rgb(bg)
+    sw.line.color.rgb = _rgb(color); sw.line.width = Pt(0.75)
+    tb = slide.shapes.add_textbox(x + Inches(0.3), y - Inches(0.02),
+                                   Inches(3.0), Inches(0.3))
+    _set_text(tb.text_frame, label, size=10, color=color, align=PP_ALIGN.LEFT)
+
+
+# ─────────────────────────────────────────────────────────
+# 根因确认 (要因确认) - 症结 → 末端原因 (1:N) 表格
+# ─────────────────────────────────────────────────────────
+def build_rca_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    topic = payload.get("topic", "根因确认")
+    rows = payload.get("rows", [])
+    reasoning = payload.get("reasoning", "")
+
+    prs = _new_deck(f"根因确认 · {topic}",
+                    f"QCKit · 要因确认 · {len(rows)} 条末端原因")
+    slide = prs.slides[0]
+    if not rows:
+        buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
+
+    headers = ["#", "症结", "末端原因", "确认内容", "确认方法",
+               "确认结果", "责任人", "完成时间", "是否要因"]
+    keys = ["_idx", "symptom", "cause", "content", "method",
+            "result", "owner", "due", "is_key"]
+    col_widths = [0.35, 1.8, 1.9, 2.0, 1.5, 2.0, 0.9, 1.0, 0.85]  # ≈12.3
+
+    n_rows = len(rows) + 1
+    tx, ty = Inches(0.4), Inches(1.0)
+    tw = Inches(sum(col_widths))
+    body_h = max(0.45, min(0.85, 5.5 / max(len(rows), 1)))
+    header_h = 0.4
+    th = Inches(header_h + body_h * len(rows))
+
+    table = slide.shapes.add_table(n_rows, len(headers), tx, ty, tw, th).table
+    for i, w in enumerate(col_widths):
+        table.columns[i].width = Inches(w)
+    table.rows[0].height = Inches(header_h)
+    for i in range(1, n_rows):
+        table.rows[i].height = Inches(body_h)
+
+    # 表头
+    for i, h in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.fill.solid(); cell.fill.fore_color.rgb = _rgb("0F172A")
+        cell.margin_left = cell.margin_right = Inches(0.05)
+        cell.margin_top = cell.margin_bottom = Inches(0.03)
+        tf = cell.text_frame; tf.clear()
+        _set_text(tf, h, size=10, bold=True, color="FFFFFF", align=PP_ALIGN.CENTER)
+
+    # 数据行 —— 同一症结连续行浅色底交替，视觉上分组
+    prev_sym = None
+    band_toggle = False
+    for r_idx, row in enumerate(rows, 1):
+        inferred = set(row.get("inferred", []))
+        sym = row.get("symptom", "")
+        if sym != prev_sym:
+            band_toggle = not band_toggle
+            prev_sym = sym
+        sym_bg = "EFF6FF" if band_toggle else "F8FAFC"
+
+        is_key_val = (row.get("is_key") or "").strip()
+        key_is_yes = is_key_val in ("是", "Y", "yes", "Yes", "YES")
+
+        for c_idx, key in enumerate(keys):
+            cell = table.cell(r_idx, c_idx)
+            cell.margin_left = cell.margin_right = Inches(0.05)
+            cell.margin_top = cell.margin_bottom = Inches(0.03)
+
+            if key == "_idx":
+                val = str(r_idx); color, bg, bold = "334155", "F1F5F9", True
+                align = PP_ALIGN.CENTER
+            elif key == "symptom":
+                val = sym; color, bg, bold = "1E3A8A", sym_bg, True
+                align = PP_ALIGN.LEFT
+            elif key == "cause":
+                val = row.get("cause", ""); color, bg, bold = "7C2D12", "FEF3C7", True
+                align = PP_ALIGN.LEFT
+            elif key == "is_key":
+                val = is_key_val or "—"
+                if key_is_yes:
+                    color, bg, bold = "FFFFFF", "DC2626", True
+                elif is_key_val in ("否", "N", "no", "No", "NO"):
+                    color, bg, bold = "334155", "F1F5F9", False
+                else:
+                    color, bg, bold = "B45309", "FEF3C7", True
+                align = PP_ALIGN.CENTER
+            elif key in inferred:
+                val = row.get(key, ""); color, bg, bold = "B45309", "FFFBEB", False
+                align = PP_ALIGN.LEFT
+            else:
+                val = row.get(key, "") or "—"
+                color, bg, bold = "1F2937", "FFFFFF", False
+                align = PP_ALIGN.LEFT
+
+            cell.fill.solid(); cell.fill.fore_color.rgb = _rgb(bg)
+            tf = cell.text_frame; tf.clear(); tf.word_wrap = True
+            _set_text(tf, val, size=9, bold=bold, color=color, align=align)
+            if key in inferred and val and key != "is_key":
+                p = tf.add_paragraph()
+                r = p.add_run(); r.text = "🤖"
+                r.font.name = FONT; r.font.size = Pt(7)
+                r.font.color.rgb = _rgb("B45309")
+
+    # 图例
+    lg_y = ty + th + Inches(0.2)
+    _mk_legend_swatch(slide, Inches(0.4), lg_y, "FEF3C7", "症结/末端原因（必填）", "7C2D12")
+    _mk_legend_swatch(slide, Inches(3.8), lg_y, "FFFBEB", "🤖 AI 联想补全", "B45309")
+    _mk_legend_swatch(slide, Inches(6.6), lg_y, "DC2626", "要因", "FFFFFF")
+
+    # 第二页：推理逻辑
+    if reasoning:
+        slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+        hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                      Inches(0), Inches(0),
+                                      prs.slide_width, Inches(0.6))
+        hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("0F172A")
+        hdr.line.fill.background()
+        _set_text(hdr.text_frame, f"AI 推理逻辑 · {topic}", size=18, bold=True,
+                  color="FFFFFF", align=PP_ALIGN.LEFT)
+        hdr.text_frame.margin_left = Inches(0.3)
+
+        box = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                     Inches(0.5), Inches(1.0),
+                                     prs.slide_width - Inches(1.0), Inches(5.8))
+        box.fill.solid(); box.fill.fore_color.rgb = _rgb("FFFBEB")
+        box.line.color.rgb = _rgb("F59E0B"); box.line.width = Pt(2)
+        tf = box.text_frame; tf.word_wrap = True
+        tf.margin_left = tf.margin_right = Inches(0.3); tf.margin_top = Inches(0.25)
+        _set_text(tf, "🤖 推理", size=14, bold=True, color="B45309", align=PP_ALIGN.LEFT)
+        p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT; p.space_before = Pt(8)
         r = p.add_run(); r.text = reasoning
         r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("451A03")
 

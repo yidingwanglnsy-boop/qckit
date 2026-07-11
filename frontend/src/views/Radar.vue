@@ -4,7 +4,7 @@
       <div class="tb-left">
         <el-icon :size="20" color="#0284c7"><Aim /></el-icon>
         <div>
-          <div class="tb-title">雷达图 · Radar</div>
+          <div class="tb-title">雷达图（Radar Chart）</div>
           <div class="tb-sub">多维度多对象对比评估，一眼看出强项与短板</div>
         </div>
       </div>

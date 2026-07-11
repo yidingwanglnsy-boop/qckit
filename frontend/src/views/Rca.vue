@@ -2,10 +2,10 @@
   <div class="qc-page">
     <div class="qc-toolbar">
       <div class="tb-left">
-        <el-icon :size="20" color="#dc2626"><Grid /></el-icon>
+        <el-icon :size="20" color="#7c3aed"><Search /></el-icon>
         <div>
-          <div class="tb-title">5W2H 分析（5W2H Analysis）</div>
-          <div class="tb-sub">批量根因分析：每行一条 Why (必填)，其余字段可让 AI 联想补全</div>
+          <div class="tb-title">根因确认（Root Cause Analysis）</div>
+          <div class="tb-sub">要因确认表：症结 → 末端原因（1:N）；空缺字段可让 AI 联想补全</div>
         </div>
       </div>
       <div class="tb-right">
@@ -32,7 +32,7 @@
       </div>
       <el-form label-position="top" size="default">
         <el-form-item label="主题">
-          <el-input v-model="topic" placeholder="如：焊接工序不良率偏高" />
+          <el-input v-model="topic" placeholder="如：焊接工序不良率偏高的要因确认" />
         </el-form-item>
         <el-form-item label="背景（可选）">
           <el-input v-model="context" type="textarea" :rows="2" resize="none"
@@ -43,7 +43,7 @@
 
     <div class="qc-panel">
       <div class="qc-panel-hd">
-        <span>📋 5W2H 表格（{{ rows.length }} 行）</span>
+        <span>📋 要因确认表（{{ rows.length }} 行）</span>
         <div style="display:flex;gap:6px;">
           <el-button size="small" @click="showPaste = true">
             <el-icon><CopyDocument /></el-icon>&nbsp;Excel 粘贴
@@ -58,36 +58,50 @@
       </div>
 
       <div class="tip-bar">
-        💡 只需填 <strong>Why（根本原因）</strong>，勾选 AI 补全后其他 6 列会自动推理。可直接从 Excel 复制粘贴。
+        💡 <strong>症结</strong> 与 <strong>末端原因</strong> 必填（1:N，同一症结重复填即可）；勾选 AI 补全后
+        <strong>确认内容 / 确认方法 / 确认结果 / 是否要因</strong> 会自动推理。责任人、完成时间由人工填写。
       </div>
 
       <div class="table-wrap">
-        <table class="w5h2-table">
+        <table class="rca-table">
           <thead>
             <tr>
               <th style="width:36px;">#</th>
-              <th class="col-why" style="width:180px;">根因 (Why) <span class="req">*</span></th>
-              <th style="width:150px;">对象 (What)</th>
-              <th style="width:120px;">地点 (Where)</th>
-              <th style="width:100px;">时间 (When)</th>
-              <th style="width:100px;">责任人 (Who)</th>
-              <th style="width:180px;">方法 (How)</th>
-              <th style="width:120px;">程度 (How Much)</th>
+              <th class="col-key" style="width:170px;">症结 (Symptom) <span class="req">*</span></th>
+              <th class="col-key2" style="width:180px;">末端原因 (Root Cause) <span class="req">*</span></th>
+              <th style="width:200px;">确认内容 (Content)</th>
+              <th style="width:150px;">确认方法 (Method)</th>
+              <th style="width:200px;">确认结果 (Result)</th>
+              <th style="width:100px;">责任人 (Owner)</th>
+              <th style="width:110px;">完成时间 (Due)</th>
+              <th style="width:90px;">是否要因 (Key?)</th>
               <th style="width:36px;"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, i) in rows" :key="i">
+            <tr v-for="(r, i) in rows" :key="i" :class="{'group-band': groupBand(i)}">
               <td class="idx">{{ i + 1 }}</td>
-              <td v-for="f in cols" :key="f"
-                  :class="{
-                    'why-cell': f === 'why',
-                    'ai-cell': isAi(i, f),
-                  }">
+              <td class="sym-cell">
+                <el-input v-model="r.symptom" size="small" type="textarea" :rows="2"
+                  resize="none" placeholder="症结（必填）" />
+              </td>
+              <td class="cause-cell">
+                <el-input v-model="r.cause" size="small" type="textarea" :rows="2"
+                  resize="none" placeholder="末端原因（必填）" />
+              </td>
+              <td v-for="f in ['content','method','result','owner','due']" :key="f"
+                  :class="{ 'ai-cell': isAi(i, f) }">
                 <el-input v-model="r[f]" size="small" type="textarea" :rows="2"
-                  resize="none"
-                  :placeholder="f === 'why' ? '根本原因（必填）' : ''" />
+                  resize="none" />
                 <span v-if="isAi(i, f)" class="ai-badge">🤖 AI</span>
+              </td>
+              <td :class="keyCellClass(r, i)">
+                <el-select v-model="r.is_key" size="small" placeholder="—" clearable style="width:100%;">
+                  <el-option label="是" value="是" />
+                  <el-option label="否" value="否" />
+                  <el-option label="待验证" value="待验证" />
+                </el-select>
+                <span v-if="isAi(i, 'is_key')" class="ai-badge">🤖</span>
               </td>
               <td>
                 <el-button text size="small" @click="removeRow(i)"
@@ -127,14 +141,13 @@
       </div>
     </transition>
 
-    <!-- Excel 粘贴对话框 -->
-    <el-dialog v-model="showPaste" title="从 Excel 粘贴" width="640px">
+    <el-dialog v-model="showPaste" title="从 Excel 粘贴" width="720px">
       <div style="color:#64748b;font-size:12px;margin-bottom:8px;">
-        直接从 Excel 复制表格粘贴到下方。第一列必须是 <strong>Why (根因)</strong>。
-        列顺序：<code>Why | What | Where | When | Who | How | HowMuch</code>，缺列的用制表符空占位。
-        <br>可含表头行（自动跳过）。
+        列顺序（用 Tab 分隔）：<code>症结 | 末端原因 | 确认内容 | 确认方法 | 确认结果 | 责任人 | 完成时间 | 是否要因</code><br>
+        <strong>症结、末端原因</strong> 必填；同一症结的多条末端原因，症结列可留空（会向上继承）或重复填写。
+        含表头行自动跳过。
       </div>
-      <el-input v-model="pasteText" type="textarea" :rows="10"
+      <el-input v-model="pasteText" type="textarea" :rows="12"
         placeholder="从 Excel 复制粘贴到这里…" resize="none" />
       <template #footer>
         <el-button @click="showPaste = false">取消</el-button>
@@ -147,15 +160,16 @@
 <script setup>
 import { ref, reactive, computed, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { analyzeW5H2, downloadPptx, downloadXlsx } from '../api'
+import { analyzeRca, downloadPptx, downloadXlsx } from '../api'
 
-const cols = ['why','what','where','when','who','how','how_much']
+const AI_FIELDS = ['content','method','result','is_key']
+const ALL_FIELDS = ['content','method','result','owner','due','is_key']
 
 const topic = ref('')
 const context = ref('')
 const useLlm = ref(true)
 const rows = reactive([blankRow()])
-const inferredMap = reactive({})  // rowIdx -> Set<field>
+const inferredMap = reactive({})
 const reasoning = ref('')
 
 const loading = ref(false)
@@ -168,13 +182,12 @@ const progress = ref(0); const elapsed = ref(0)
 let progressTimer = null, elapsedTimer = null
 
 function blankRow() {
-  return { why:'', what:'', where:'', when:'', who:'', how:'', how_much:'' }
+  return { symptom:'', cause:'', content:'', method:'', result:'', owner:'', due:'', is_key:'' }
 }
 function addRow() { rows.push(blankRow()) }
 function removeRow(i) {
   rows.splice(i, 1)
   delete inferredMap[i]
-  // 重新排 inferredMap 键
   const remap = {}
   Object.keys(inferredMap).sort((a,b)=>+a-+b).forEach((k,newIdx) => {
     if (+k !== i) remap[newIdx] = inferredMap[k]
@@ -183,45 +196,62 @@ function removeRow(i) {
   Object.assign(inferredMap, remap)
 }
 
-function isAi(i, f) {
-  return inferredMap[i]?.has(f) ?? false
+function isAi(i, f) { return inferredMap[i]?.has(f) ?? false }
+
+// 同一 symptom 连续行浅底交替；用累计切换次数的奇偶决定
+function groupBand(i) {
+  let toggle = 0, prev = null
+  for (let k = 0; k <= i; k++) {
+    if (rows[k].symptom !== prev) { toggle++; prev = rows[k].symptom }
+  }
+  return toggle % 2 === 0
+}
+
+function keyCellClass(r, i) {
+  const v = (r.is_key || '').trim()
+  if (v === '是') return 'key-yes'
+  if (v === '否') return 'key-no'
+  if (isAi(i, 'is_key')) return 'ai-cell'
+  return ''
 }
 
 function loadSample() {
-  topic.value = '焊接工序不良率偏高'
+  topic.value = '焊接工序不良率偏高的要因确认'
   context.value = '3 号机台近 2 周不良率从 1.2% 升至 3.5%'
   rows.splice(0, rows.length,
-    { why:'焊工技能参差不齐，作业标准执行不到位',
-      what:'', where:'', when:'', who:'', how:'', how_much:'' },
-    { why:'焊丝供应商更换后规格波动',
-      what:'', where:'', when:'', who:'', how:'', how_much:'' },
-    { why:'保护气流量表读数不准',
-      what:'', where:'', when:'', who:'', how:'', how_much:'' },
+    { symptom:'焊缝气孔率上升', cause:'保护气流量表读数偏差', content:'', method:'', result:'', owner:'', due:'', is_key:'' },
+    { symptom:'焊缝气孔率上升', cause:'焊工作业标准执行不到位',  content:'', method:'', result:'', owner:'', due:'', is_key:'' },
+    { symptom:'焊丝送丝不稳', cause:'新批次焊丝直径公差偏大',   content:'', method:'', result:'', owner:'', due:'', is_key:'' },
   )
   Object.keys(inferredMap).forEach(k => delete inferredMap[k])
   reasoning.value = ''
 }
 
 function applyPaste() {
-  const lines = pasteText.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  const lines = pasteText.value.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim())
   if (!lines.length) return ElMessage.warning('内容为空')
-  // 跳过明显的表头行（首格含 why/根因/why?）
-  const firstCells = lines[0].split(/\t/).map(c => c.toLowerCase())
-  const skipHead = /why|根因|根本原因/.test(firstCells[0])
+  const first = lines[0].split(/\t/).map(c => c.toLowerCase())
+  const skipHead = /症结|symptom/.test(first[0])
   const raw = skipHead ? lines.slice(1) : lines
+
+  let carrySym = ''
   const parsed = raw.map(line => {
-    const cells = line.split(/\t/)
+    const c = line.split(/\t/)
+    const sym = (c[0] || '').trim() || carrySym  // 空则继承上一行症结
+    if (sym) carrySym = sym
     return {
-      why: (cells[0] || '').trim(),
-      what: (cells[1] || '').trim(),
-      where: (cells[2] || '').trim(),
-      when: (cells[3] || '').trim(),
-      who: (cells[4] || '').trim(),
-      how: (cells[5] || '').trim(),
-      how_much: (cells[6] || '').trim(),
+      symptom: sym,
+      cause:   (c[1] || '').trim(),
+      content: (c[2] || '').trim(),
+      method:  (c[3] || '').trim(),
+      result:  (c[4] || '').trim(),
+      owner:   (c[5] || '').trim(),
+      due:     (c[6] || '').trim(),
+      is_key:  (c[7] || '').trim(),
     }
-  }).filter(r => r.why.length >= 2)
-  if (!parsed.length) return ElMessage.error('未识别到有效行（Why 必须至少 2 字符）')
+  }).filter(r => r.symptom.length >= 2 && r.cause.length >= 2)
+
+  if (!parsed.length) return ElMessage.error('未识别到有效行（症结、末端原因至少 2 字符）')
   rows.splice(0, rows.length, ...parsed)
   Object.keys(inferredMap).forEach(k => delete inferredMap[k])
   showPaste.value = false
@@ -245,28 +275,28 @@ function stopProgress() {
 
 const hasResult = computed(() =>
   Object.keys(inferredMap).length > 0 ||
-  rows.some(r => cols.some(f => r[f]?.trim()))
+  rows.some(r => ALL_FIELDS.some(f => r[f]?.trim()) || r.symptom?.trim() || r.cause?.trim())
 )
 
 async function run() {
   if (!topic.value.trim()) return ElMessage.warning('请填写主题')
-  const valid = rows.filter(r => r.why?.trim().length >= 2)
-  if (!valid.length) return ElMessage.error('至少 1 行 Why（根本原因）为必填')
+  const valid = rows.filter(r =>
+    (r.symptom?.trim().length >= 2) && (r.cause?.trim().length >= 2))
+  if (!valid.length) return ElMessage.error('至少 1 行的 症结 与 末端原因 都需 ≥ 2 字符')
 
   loading.value = true
   if (useLlm.value) startProgress()
   try {
-    const resp = await analyzeW5H2({
+    const resp = await analyzeRca({
       topic: topic.value,
       context: context.value,
       use_llm: useLlm.value,
       rows: valid.map(r => ({...r})),
     })
-    // 回填：仅 AI 补全过的字段（后端已过滤，用户填的原样返回）
-    // 注意：valid 可能少于 rows（跳过了 why 空行），按 valid 顺序回填
     let vi = 0
     for (let i = 0; i < rows.length; i++) {
-      if (!rows[i].why?.trim() || rows[i].why.trim().length < 2) continue
+      const r = rows[i]
+      if (!(r.symptom?.trim().length >= 2 && r.cause?.trim().length >= 2)) continue
       const rr = resp.rows[vi++]
       if (!rr) break
       for (const f of rr.inferred) {
@@ -301,8 +331,8 @@ function buildResultPayload() {
     topic: topic.value,
     reasoning: reasoning.value,
     rows: rows
-      .filter(r => r.why?.trim())
-      .map((r, i) => ({
+      .filter(r => r.symptom?.trim() && r.cause?.trim())
+      .map((r) => ({
         ...r,
         inferred: [...(inferredMap[rows.indexOf(r)] || new Set())],
       })),
@@ -313,13 +343,13 @@ function exportJson() {
   const blob = new Blob([JSON.stringify(buildResultPayload(), null, 2)],
                         {type:'application/json'})
   const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob); a.download = `5W2H_${topic.value}.json`; a.click()
+  a.href = URL.createObjectURL(blob); a.download = `根因确认_${topic.value}.json`; a.click()
 }
 
 async function exportPptx() {
   pptxLoading.value = true
   try {
-    await downloadPptx('w5h2', buildResultPayload(), `5W2H_${topic.value}.pptx`)
+    await downloadPptx('rca', buildResultPayload(), `根因确认_${topic.value}.pptx`)
     ElMessage.success('PPTX 已下载')
   } catch (e) {
     ElMessage.error('导出失败: ' + (e.response?.data?.detail || e.message))
@@ -329,7 +359,7 @@ async function exportPptx() {
 async function exportXlsx() {
   xlsxLoading.value = true
   try {
-    await downloadXlsx('w5h2', buildResultPayload(), `5W2H_${topic.value}.xlsx`)
+    await downloadXlsx('rca', buildResultPayload(), `根因确认_${topic.value}.xlsx`)
     ElMessage.success('XLSX 已下载（按当前品牌主题配色）')
   } catch (e) {
     ElMessage.error('导出失败: ' + (e.response?.data?.detail || e.message))
@@ -361,49 +391,61 @@ onBeforeUnmount(() => {
 }
 .qc-panel-hd {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 13px; font-weight: 600; color: #334155;
-  margin-bottom: 12px;
+  font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 12px;
 }
 .tip-bar {
-  background: #eff6ff; color: #1e40af; padding: 8px 12px;
+  background: #f5f3ff; color: #5b21b6; padding: 8px 12px;
   border-radius: 6px; font-size: 12.5px; margin-bottom: 10px;
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid #7c3aed;
 }
 .qc-actions { display: flex; gap: 8px; }
 
 .table-wrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
-.w5h2-table {
+.rca-table {
   border-collapse: collapse; width: 100%; font-size: 12.5px;
   table-layout: fixed;
 }
-.w5h2-table thead th {
+.rca-table thead th {
   background: #0f172a; color: #fff; padding: 8px 6px;
   font-weight: 600; text-align: left; white-space: nowrap;
 }
-.w5h2-table thead th.col-why { background: #991b1b; }
-.w5h2-table thead th .req { color: #fca5a5; }
-.w5h2-table tbody td {
+.rca-table thead th.col-key  { background: #1e3a8a; }
+.rca-table thead th.col-key2 { background: #7c2d12; }
+.rca-table thead th .req { color: #fca5a5; }
+.rca-table tbody td {
   padding: 4px; vertical-align: top;
   border-top: 1px solid #f1f5f9; position: relative;
 }
-.w5h2-table td.idx {
+.rca-table tbody tr.group-band td.sym-cell { background: #eff6ff; }
+.rca-table tbody tr:not(.group-band) td.sym-cell { background: #f8fafc; }
+.rca-table td.idx {
   text-align: center; font-weight: 600; color: #64748b;
   background: #f8fafc; font-size: 13px;
 }
-.w5h2-table td.why-cell { background: #fef2f2; }
-.w5h2-table td.why-cell :deep(.el-textarea__inner) {
-  border-color: #fecaca; font-weight: 500;
+.rca-table td.sym-cell :deep(.el-textarea__inner) {
+  border-color: #bfdbfe; font-weight: 500; color: #1e3a8a;
 }
-.w5h2-table td.ai-cell { background: #fffbeb; }
-.w5h2-table td.ai-cell :deep(.el-textarea__inner) {
+.rca-table td.cause-cell { background: #fef3c7; }
+.rca-table td.cause-cell :deep(.el-textarea__inner) {
+  border-color: #fde68a; font-weight: 500; color: #7c2d12;
+}
+.rca-table td.ai-cell { background: #fffbeb; }
+.rca-table td.ai-cell :deep(.el-textarea__inner),
+.rca-table td.ai-cell :deep(.el-select .el-input__wrapper) {
   border-color: #fde68a; background: #fffef6;
 }
+.rca-table td.key-yes { background: #fee2e2; }
+.rca-table td.key-yes :deep(.el-select .el-input__wrapper) {
+  background: #dc2626; box-shadow: 0 0 0 1px #b91c1c inset;
+}
+.rca-table td.key-yes :deep(.el-input__inner) { color: #fff; font-weight: 600; }
+.rca-table td.key-no  { background: #f1f5f9; }
 .ai-badge {
   position: absolute; top: 2px; right: 6px;
   font-size: 9px; color: #b45309; background: #fef3c7;
   padding: 1px 4px; border-radius: 3px; font-weight: 600;
 }
-.w5h2-table :deep(.el-textarea__inner) {
+.rca-table :deep(.el-textarea__inner) {
   padding: 4px 6px; font-size: 12px; min-height: 32px;
 }
 

@@ -4,7 +4,7 @@
       <div class="tb-left">
         <el-icon :size="20" color="#dc2626"><TrendCharts /></el-icon>
         <div>
-          <div class="tb-title">柏拉图 · Pareto</div>
+          <div class="tb-title">柏拉图（Pareto Chart）</div>
           <div class="tb-sub">按频次/成本降序，找出贡献超过阈值的关键少数（Vital Few）</div>
         </div>
       </div>

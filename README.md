@@ -2,7 +2,7 @@
 
 > 让 QC 手法从「填 Excel 模板」升级为「输入几个节点，LLM 自动出图 + 出报告」。
 
-![status](https://img.shields.io/badge/status-alpha-orange) ![license](https://img.shields.io/badge/license-MIT-blue) ![python](https://img.shields.io/badge/python-3.10+-blue)
+![status](https://img.shields.io/badge/status-alpha-orange) ![license](https://img.shields.io/badge/license-PolyForm_NC_1.0.0-purple) ![commercial](https://img.shields.io/badge/commercial-license_required-red) ![python](https://img.shields.io/badge/python-3.10+-blue)
 
 ## ✨ 特性
 
@@ -80,6 +80,15 @@ cd ../backend && uvicorn qckit.main:app
 2. 在 `backend/qckit/api/tools_api.py` 加一个路由
 3. 在 `frontend/src/views/` 加一个页面，注册路由
 
-## 📄 License
+## 📄 License · 双许可
 
-MIT © 2026
+QCKit 采用 **双许可 (Dual License)** 模式：
+
+- **非商业用途** — 个人学习、学术研究、非营利机构内部使用、开源集成等，
+  遵循 [PolyForm Noncommercial License 1.0.0](./LICENSE) **免费使用**。
+- **商业用途** — 任何用于经营性目的（对外销售、SaaS、企业生产系统、
+  付费咨询交付、闭源分发等）**必须**先获得商业授权。
+
+商业授权咨询：请在本仓库提 Issue / Discussion。
+
+Copyright © 2026 王一定 (Yiding Wang)

@@ -5,7 +5,7 @@
       <div class="tb-left">
         <el-icon :size="20" color="#059669"><Collection /></el-icon>
         <div>
-          <div class="tb-title">亲和图 · KJ 法</div>
+          <div class="tb-title">亲和图（Affinity Diagram / KJ）</div>
           <div class="tb-sub">把零散观点自动聚类成有意义的主题，支持手工调整</div>
         </div>
       </div>

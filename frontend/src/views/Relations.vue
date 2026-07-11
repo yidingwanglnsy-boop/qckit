@@ -5,7 +5,7 @@
       <div class="tb-left">
         <el-icon :size="20" color="#2563eb"><Share /></el-icon>
         <div>
-          <div class="tb-title">关联图 · Relations Diagram</div>
+          <div class="tb-title">关联图（Relations Diagram）</div>
           <div class="tb-sub">LLM 自动识别核心 / 关键 / 传导节点并推断因果关系</div>
         </div>
       </div>
