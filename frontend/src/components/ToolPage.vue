@@ -94,7 +94,7 @@ const result = ref(null)
 const toolkit = useToolkit(props.toolKey, props.form)
 const route = useRoute()
 
-// 优先级: sessionStorage 恢复 > URL query topic > 自动填入首个示例
+// 优先级: sessionStorage 恢复 > URL query topic > 空 (不自动填示例)
 onMounted(() => {
   const restoreKey = 'qckit.restore.' + props.toolKey
   const raw = sessionStorage.getItem(restoreKey)
@@ -110,11 +110,6 @@ onMounted(() => {
   if (qtopic && !props.form.topic) {
     props.form.topic = String(qtopic)
     ElMessage.info('已带入上一步的主题，可直接分析')
-    return
-  }
-  // 首启空表单 → 自动填入首个示例, 帮新手起步
-  if (!props.form.topic && toolkit.samples.length) {
-    toolkit.loadSample(toolkit.samples[0].id)
   }
 })
 
