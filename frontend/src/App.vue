@@ -25,6 +25,21 @@
           <el-menu-item index="/tools/affinity">
             <el-icon><Collection /></el-icon><template #title>亲和图（KJ）</template>
           </el-menu-item>
+          <el-menu-item index="/tools/tree">
+            <el-icon><Grid /></el-icon><template #title>系统图</template>
+          </el-menu-item>
+          <el-menu-item index="/tools/matrix">
+            <el-icon><Grid /></el-icon><template #title>矩阵图（QFD）</template>
+          </el-menu-item>
+          <el-menu-item index="/tools/mda">
+            <el-icon><DataAnalysis /></el-icon><template #title>矩阵数据解析</template>
+          </el-menu-item>
+          <el-menu-item index="/tools/pdpc">
+            <el-icon><Compass /></el-icon><template #title>PDPC 决策程序图</template>
+          </el-menu-item>
+          <el-menu-item index="/tools/arrow">
+            <el-icon><Right /></el-icon><template #title>箭线图（CPM）</template>
+          </el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="old-qc">
           <template #title>

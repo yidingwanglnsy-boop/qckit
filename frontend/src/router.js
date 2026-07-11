@@ -8,6 +8,11 @@ import W5H2 from './views/W5H2.vue'
 import Rca from './views/Rca.vue'
 import Fishbone from './views/Fishbone.vue'
 import QccGuide from './views/QccGuide.vue'
+import Tree from './views/Tree.vue'
+import Matrix from './views/Matrix.vue'
+import Mda from './views/Mda.vue'
+import Pdpc from './views/Pdpc.vue'
+import Arrow from './views/Arrow.vue'
 import Brand from './views/Brand.vue'
 import Settings from './views/Settings.vue'
 
@@ -23,6 +28,11 @@ export default createRouter({
     { path: '/tools/rca',       component: Rca       },
     { path: '/tools/fishbone',  component: Fishbone  },
     { path: '/tools/qcc-guide', component: QccGuide  },
+    { path: '/tools/tree',      component: Tree      },
+    { path: '/tools/matrix',    component: Matrix    },
+    { path: '/tools/mda',       component: Mda       },
+    { path: '/tools/pdpc',      component: Pdpc      },
+    { path: '/tools/arrow',     component: Arrow     },
     { path: '/brand',    component: Brand },
     { path: '/settings', component: Settings }
   ]

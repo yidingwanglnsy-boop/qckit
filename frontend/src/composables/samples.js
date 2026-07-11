@@ -128,4 +128,61 @@ APP闪退`,
       team_size: 6,
     }},
   ],
+
+  tree: [
+    { id: 'defect', name: '降低3号线不良率', data: {
+      topic: '3 个月内将 3 号焊接线不良率从 3.5% 降至 1.2% 以下',
+      context: '客户投诉激增，QCC 项目立项',
+      layers: 3,
+      hints: ['焊工技能', '设备状态', 'SOP 更新'],
+    }},
+  ],
+
+  matrix: [
+    { id: 'qfd', name: 'QFD 客户需求×工程特性', data: {
+      topic: '产品客户需求 vs 工程特性',
+      row_label: '客户需求',
+      col_label: '工程特性',
+      rows_text: '外观美观\n操作简单\n坚固耐用\n价格实惠\n售后便利',
+      cols_text: '表面工艺\n按钮布局\n材料强度\n制造成本\n服务网点数',
+      context: '面向 25-40 岁家庭用户的中端产品',
+    }},
+  ],
+
+  mda: [
+    { id: 'supplier', name: '供应商 5 家综合评估', data: {
+      topic: '5 家供应商综合评估',
+      metrics_text: '质量,交期,价格,服务,技术',
+      lower_is_better_text: '交期,价格',
+      subjects_text: `供应商A,9,7,8,9,8
+供应商B,8,9,7,7,9
+供应商C,6,6,5,6,5
+供应商D,7,8,9,7,7
+供应商E,5,5,6,5,4`,
+    }},
+  ],
+
+  pdpc: [
+    { id: 'launch', name: '12 月新产品量产上线', data: {
+      topic: '12 月新产品量产上线',
+      steps_text: '物料到位\n试产验证\n量产切换\n首批交付',
+      risk_dims_text: '供应,技术,质量,进度',
+      context: '关键料交期紧张，工艺参数尚未完全定型',
+    }},
+  ],
+
+  arrow: [
+    { id: 'qcc12w', name: 'QCC 项目 12 周计划', data: {
+      topic: 'QCC 项目 12 周排期',
+      tasks_text: `选题,3,,张三
+现状调查,7,选题,李四
+目标设定,2,选题,张三
+要因分析,8,现状调查,王五
+对策制定,5,要因分析,团队
+实施,12,对策制定,王五
+效果确认,5,实施,李四
+标准化,3,效果确认,张三`,
+      auto_infer: true,
+    }},
+  ],
 }

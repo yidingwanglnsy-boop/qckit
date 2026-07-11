@@ -6,17 +6,25 @@ from fastapi.responses import StreamingResponse
 from ..brand import get_brand
 from ..core.fishbone_pptx import build_fishbone_pptx
 from ..core.registry import all_tools
-from ..core.pptx_export import (build_affinity_pptx, build_pareto_pptx,
+from ..core.pptx_export import (build_affinity_pptx, build_arrow_pptx,
+                                build_matrix_pptx, build_mda_pptx,
+                                build_pareto_pptx, build_pdpc_pptx,
                                 build_radar_pptx, build_rca_pptx,
-                                build_relations_pptx, build_w5h2_pptx)
+                                build_relations_pptx, build_tree_pptx,
+                                build_w5h2_pptx)
 from ..core.xlsx_export import build_rca_xlsx, build_w5h2_xlsx
 from ..tools.affinity import AffinityRequest, analyze as affinity_analyze
+from ..tools.arrow import ArrowRequest, analyze as arrow_analyze
 from ..tools.fishbone import FishboneRequest, analyze as fishbone_analyze
+from ..tools.matrix import MatrixRequest, analyze as matrix_analyze
+from ..tools.mda import MDARequest, analyze as mda_analyze
 from ..tools.pareto import ParetoRequest, analyze as pareto_analyze
+from ..tools.pdpc import PDPCRequest, analyze as pdpc_analyze
 from ..tools.qcc_guide import GuideRequest, analyze as guide_analyze
 from ..tools.radar import RadarRequest, analyze as radar_analyze
 from ..tools.rca import RcaRequest, analyze as rca_analyze
 from ..tools.relations import RelationsRequest, analyze as relations_analyze
+from ..tools.tree import TreeRequest, analyze as tree_analyze
 from ..tools.w5h2 import W5H2Request, analyze as w5h2_analyze
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
@@ -153,3 +161,64 @@ def fishbone_export_pptx(payload: dict):
 @router.post("/qcc_guide/analyze")
 def qcc_guide_endpoint(req: GuideRequest):
     return _run(guide_analyze, req)
+
+
+# —— 新 5 工具 ——————————————————————————————————————————————
+@router.post("/tree/analyze")
+def tree_endpoint(req: TreeRequest):
+    return _run(tree_analyze, req)
+
+
+@router.post("/tree/export/pptx")
+def tree_export_pptx(payload: dict):
+    buf = build_tree_pptx(payload)
+    topic = payload.get("topic", "系统图")
+    return _pptx_response(buf, f"系统图_{topic}.pptx")
+
+
+@router.post("/matrix/analyze")
+def matrix_endpoint(req: MatrixRequest):
+    return _run(matrix_analyze, req)
+
+
+@router.post("/matrix/export/pptx")
+def matrix_export_pptx(payload: dict):
+    buf = build_matrix_pptx(payload)
+    topic = payload.get("topic", "矩阵图")
+    return _pptx_response(buf, f"矩阵图_{topic}.pptx")
+
+
+@router.post("/mda/analyze")
+def mda_endpoint(req: MDARequest):
+    return _run(mda_analyze, req)
+
+
+@router.post("/mda/export/pptx")
+def mda_export_pptx(payload: dict):
+    buf = build_mda_pptx(payload)
+    topic = payload.get("topic", "矩阵数据解析")
+    return _pptx_response(buf, f"矩阵数据解析_{topic}.pptx")
+
+
+@router.post("/pdpc/analyze")
+def pdpc_endpoint(req: PDPCRequest):
+    return _run(pdpc_analyze, req)
+
+
+@router.post("/pdpc/export/pptx")
+def pdpc_export_pptx(payload: dict):
+    buf = build_pdpc_pptx(payload)
+    topic = payload.get("topic", "PDPC")
+    return _pptx_response(buf, f"PDPC_{topic}.pptx")
+
+
+@router.post("/arrow/analyze")
+def arrow_endpoint(req: ArrowRequest):
+    return _run(arrow_analyze, req)
+
+
+@router.post("/arrow/export/pptx")
+def arrow_export_pptx(payload: dict):
+    buf = build_arrow_pptx(payload)
+    topic = payload.get("topic", "箭线图")
+    return _pptx_response(buf, f"箭线图_{topic}.pptx")

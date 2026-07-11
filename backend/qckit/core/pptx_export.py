@@ -1101,3 +1101,453 @@ def build_rca_pptx(payload: dict[str, Any]) -> io.BytesIO:
     _add_footer(prs)
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf
+
+
+# ══════════════════════════════════════════════════════════════
+# 新 5 工具的 PPTX 导出 —— 简化版, 1-2 页综合报告
+# ══════════════════════════════════════════════════════════════
+
+def _add_summary_box(slide, x_in, y_in, w_in, h_in, title, body,
+                     title_color="1E40AF", bg="EFF6FF", border="3B82F6"):
+    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(x_in), Inches(y_in), Inches(w_in), Inches(h_in))
+    box.fill.solid(); box.fill.fore_color.rgb = _rgb(bg)
+    box.line.color.rgb = _rgb(border); box.line.width = Pt(1.5)
+    tf = box.text_frame; tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0.2); tf.margin_top = Inches(0.15)
+    _set_text(tf, title, size=13, bold=True, color=title_color, align=PP_ALIGN.LEFT)
+    p = tf.add_paragraph(); p.space_before = Pt(6); p.alignment = PP_ALIGN.LEFT
+    r = p.add_run(); r.text = body or "—"
+    r.font.name = FONT; r.font.size = Pt(11); r.font.color.rgb = _rgb("1E293B")
+    return box
+
+
+def build_tree_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    """系统图: 横向层级树 (root 在左, 叶节点在右)。"""
+    topic = payload.get("topic", "系统图")
+    nodes = payload.get("nodes", [])
+    prs = _new_deck(f"系统图 · {topic}",
+                    "QCKit · Tree Diagram · 从目标到可执行行动的层级拆解")
+
+    slide = prs.slides[0]
+    # 按层分组
+    by_level: dict[int, list[dict]] = {}
+    for n in nodes:
+        by_level.setdefault(int(n.get("level", 0)), []).append(n)
+    if not by_level:
+        return _finish(prs)
+
+    max_lvl = max(by_level)
+    lvl_count = max_lvl + 1
+    x_start = 0.35
+    x_span = (13.33 - x_start * 2) / max(lvl_count, 1)
+    top = 1.1
+    height = 6.3
+
+    # 位置字典
+    pos: dict[str, tuple[float, float, float, float]] = {}
+    prio_colors = {"P1": ("FEF2F2", "DC2626"),
+                   "P2": ("FEF3C7", "D97706"),
+                   "P3": ("F0FDF4", "16A34A")}
+    for lvl in range(lvl_count):
+        items = by_level.get(lvl, [])
+        n = len(items) or 1
+        cell_h = height / n
+        box_h = min(0.7, cell_h - 0.1)
+        for i, item in enumerate(items):
+            x = x_start + lvl * x_span + 0.1
+            w = x_span - 0.2
+            y = top + i * cell_h + (cell_h - box_h) / 2
+            bg, border = "E0E7FF", "6366F1"
+            if lvl == 0:
+                bg, border = "1E40AF", "1E3A8A"
+            elif item.get("is_leaf"):
+                bg, border = prio_colors.get(item.get("priority", "P3"), ("F0FDF4", "16A34A"))
+            box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                Inches(x), Inches(y), Inches(w), Inches(box_h))
+            box.fill.solid(); box.fill.fore_color.rgb = _rgb(bg)
+            box.line.color.rgb = _rgb(border); box.line.width = Pt(1.2)
+            tf = box.text_frame; tf.word_wrap = True
+            tf.margin_left = Inches(0.08); tf.margin_top = Inches(0.05)
+            tc = "FFFFFF" if lvl == 0 else "1E293B"
+            _set_text(tf, item.get("label", "?"), size=10, bold=(lvl <= 1),
+                      color=tc, align=PP_ALIGN.LEFT)
+            if item.get("is_leaf") and item.get("priority"):
+                pp = tf.add_paragraph(); pp.alignment = PP_ALIGN.LEFT
+                pr = pp.add_run()
+                pr.text = f"{item['priority']} · 收益{item.get('payoff',0)}/可行{item.get('feasibility',0)}"
+                pr.font.name = FONT; pr.font.size = Pt(8)
+                pr.font.color.rgb = _rgb(border)
+            pos[item.get("id", "")] = (x + w, y + box_h / 2, x, y + box_h / 2)
+
+    # 画连线 parent -> child
+    for n in nodes:
+        p = n.get("parent")
+        if p and p in pos and n.get("id") in pos:
+            px, py, _, _ = pos[p]
+            _, _, cx, cy = pos[n["id"]]
+            ln = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+                Inches(px), Inches(py), Inches(cx), Inches(cy))
+            ln.line.color.rgb = _rgb("94A3B8"); ln.line.width = Pt(0.75)
+
+    # 结论页
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0,
+        prs.slide_width, Inches(0.6))
+    hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("1E40AF")
+    hdr.line.fill.background()
+    _set_text(hdr.text_frame, f"MECE 校验 & 建议 · {topic}",
+              size=16, bold=True, color="FFFFFF", align=PP_ALIGN.LEFT)
+    hdr.text_frame.margin_left = Inches(0.3)
+
+    mece = "\n".join(f"· {m}" for m in payload.get("mece_check", []) or ["—"])
+    recs = "\n".join(f"{i+1}. {r}" for i, r in enumerate(payload.get("recommendations", []) or ["—"]))
+    _add_summary_box(slide2, 0.35, 0.9, 6.3, 5.8, "🔍 MECE 反思", mece,
+                     title_color="B45309", bg="FEF3C7", border="F59E0B")
+    _add_summary_box(slide2, 6.85, 0.9, 6.13, 5.8, "🎯 优先行动建议", recs,
+                     title_color="065F46", bg="D1FAE5", border="10B981")
+    return _finish(prs)
+
+
+def build_matrix_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    """矩阵图: L 型热力矩阵 + Top 交叉点。"""
+    topic = payload.get("topic", "矩阵图")
+    rows = payload.get("rows", [])
+    cols = payload.get("cols", [])
+    cells = {(c["row"], c["col"]): c for c in payload.get("cells", [])}
+    weights = payload.get("row_weights", {}) or {}
+
+    prs = _new_deck(f"矩阵图 · {topic}",
+                    "QCKit · Matrix Diagram · ● 强 ◎ 中 △ 弱")
+    slide = prs.slides[0]
+
+    n_r, n_c = len(rows), len(cols)
+    if not n_r or not n_c:
+        return _finish(prs)
+
+    # 网格几何
+    left = 1.5; top = 1.1
+    grid_w = 11.5; grid_h = 5.7
+    col_w = min(1.4, (grid_w - 1.5) / max(n_c, 1))
+    row_h = min(0.55, (grid_h - 0.6) / max(n_r, 1))
+
+    color_map = {9: ("DC2626", "FFFFFF"),  # 红
+                 3: ("F59E0B", "FFFFFF"),  # 橙
+                 1: ("94A3B8", "FFFFFF")}  # 灰
+
+    # 列标签
+    for j, c in enumerate(cols):
+        x = left + 1.2 + j * col_w
+        tb = slide.shapes.add_textbox(Inches(x), Inches(top),
+            Inches(col_w), Inches(0.5))
+        _set_text(tb.text_frame, c, size=10, bold=True, color="1E293B",
+                  align=PP_ALIGN.CENTER)
+
+    # 行标签 + 权重列 + 单元格
+    for i, r in enumerate(rows):
+        y = top + 0.55 + i * row_h
+        tb = slide.shapes.add_textbox(Inches(left - 1.35), Inches(y),
+            Inches(1.15), Inches(row_h))
+        _set_text(tb.text_frame, r, size=10, bold=True, color="1E293B",
+                  align=PP_ALIGN.RIGHT)
+        # 权重
+        w = weights.get(r, 0)
+        wb = slide.shapes.add_textbox(Inches(left - 0.2), Inches(y),
+            Inches(0.4), Inches(row_h))
+        _set_text(wb.text_frame, f"权{w}" if w else "", size=9,
+                  color="6366F1", align=PP_ALIGN.CENTER)
+        for j, c in enumerate(cols):
+            x = left + 1.2 + j * col_w
+            cell = cells.get((r, c))
+            box = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                Inches(x), Inches(y), Inches(col_w - 0.05), Inches(row_h - 0.05))
+            if cell:
+                s = int(cell.get("strength", 0))
+                bg, fg = color_map.get(s, ("F8FAFC", "94A3B8"))
+                box.fill.solid(); box.fill.fore_color.rgb = _rgb(bg)
+                box.line.fill.background()
+                _set_text(box.text_frame, cell.get("symbol", ""),
+                          size=14, bold=True, color=fg, align=PP_ALIGN.CENTER)
+            else:
+                box.fill.solid(); box.fill.fore_color.rgb = _rgb("F8FAFC")
+                box.line.color.rgb = _rgb("E2E8F0"); box.line.width = Pt(0.5)
+
+    # 结论页
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0,
+        prs.slide_width, Inches(0.6))
+    hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("7C3AED")
+    hdr.line.fill.background()
+    _set_text(hdr.text_frame, f"关键交叉点 & 建议 · {topic}",
+              size=16, bold=True, color="FFFFFF", align=PP_ALIGN.LEFT)
+    hdr.text_frame.margin_left = Inches(0.3)
+
+    hot = "\n".join(f"🔥 {h.get('row','?')} × {h.get('col','?')}  →  {h.get('action','?')}"
+                     for h in (payload.get("hot_spots") or [])[:6])
+    recs = "\n".join(f"{i+1}. {r}" for i, r in enumerate(payload.get("recommendations", []) or ["—"]))
+    _add_summary_box(slide2, 0.35, 0.9, 6.3, 5.8, "🎯 Top 交叉点", hot or "—",
+                     title_color="B91C1C", bg="FEF2F2", border="EF4444")
+    _add_summary_box(slide2, 6.85, 0.9, 6.13, 5.8, "💡 行动建议", recs,
+                     title_color="065F46", bg="D1FAE5", border="10B981")
+    return _finish(prs)
+
+
+def build_mda_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    """矩阵数据解析: 2D 散点图 + 4 象限标注。"""
+    topic = payload.get("topic", "矩阵数据解析")
+    points = payload.get("points", [])
+    pc1 = payload.get("pc1_name", "PC1")
+    pc2 = payload.get("pc2_name", "PC2")
+    qlabels = payload.get("quadrant_labels", {}) or {}
+    qinsights = payload.get("quadrant_insights", {}) or {}
+    var_ratio = payload.get("variance_ratio", [0, 0])
+
+    prs = _new_deck(f"矩阵数据解析 · {topic}",
+                    f"QCKit · Matrix Data Analysis · PC1={pc1} · PC2={pc2}")
+    slide = prs.slides[0]
+
+    # 象限画布 (中心点在 slide 中央偏左)
+    cx_in, cy_in = 4.5, 4.0
+    half = 3.0
+    # 象限背景 + 标签
+    quad_colors = {"1": "D1FAE5", "2": "FEF3C7", "3": "FEE2E2", "4": "DBEAFE"}
+    quad_offsets = {"1": (cx_in, cy_in - half),
+                    "2": (cx_in - half, cy_in - half),
+                    "3": (cx_in - half, cy_in),
+                    "4": (cx_in, cy_in)}
+    for q, (qx, qy) in quad_offsets.items():
+        bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+            Inches(qx), Inches(qy), Inches(half), Inches(half))
+        bg.fill.solid(); bg.fill.fore_color.rgb = _rgb(quad_colors[q])
+        bg.line.color.rgb = _rgb("E2E8F0"); bg.line.width = Pt(0.5)
+        # 象限标签
+        lbl = qlabels.get(q, f"第 {q} 象限")
+        tb = slide.shapes.add_textbox(Inches(qx + 0.05), Inches(qy + 0.05),
+            Inches(half - 0.1), Inches(0.3))
+        _set_text(tb.text_frame, f"Ⅰ Ⅱ Ⅲ Ⅳ"[int(q)*2-2:int(q)*2-1] + f" {lbl}",
+                  size=10, bold=True, color="475569", align=PP_ALIGN.LEFT)
+
+    # 坐标轴 (十字)
+    ax = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+        Inches(cx_in - half), Inches(cy_in),
+        Inches(cx_in + half), Inches(cy_in))
+    ax.line.color.rgb = _rgb("64748B"); ax.line.width = Pt(1.5)
+    ay = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+        Inches(cx_in), Inches(cy_in - half),
+        Inches(cx_in), Inches(cy_in + half))
+    ay.line.color.rgb = _rgb("64748B"); ay.line.width = Pt(1.5)
+    # 轴标签
+    tb = slide.shapes.add_textbox(Inches(cx_in + half - 1.3),
+        Inches(cy_in + 0.05), Inches(1.3), Inches(0.3))
+    _set_text(tb.text_frame, f"→ {pc1} ({var_ratio[0]*100:.0f}%)",
+              size=9, color="475569")
+    tb = slide.shapes.add_textbox(Inches(cx_in + 0.05),
+        Inches(cy_in - half), Inches(1.3), Inches(0.3))
+    _set_text(tb.text_frame, f"↑ {pc2} ({var_ratio[1]*100:.0f}%)",
+              size=9, color="475569")
+
+    # 散点 (归一到 half 内, 找最大绝对值)
+    if points:
+        mx = max(max(abs(p.get("pc1", 0)), abs(p.get("pc2", 0))) for p in points) or 1
+        for p in points:
+            dx = p.get("pc1", 0) / mx * (half * 0.85)
+            dy = -p.get("pc2", 0) / mx * (half * 0.85)  # pptx y 向下
+            px = cx_in + dx - 0.08
+            py = cy_in + dy - 0.08
+            dot = slide.shapes.add_shape(MSO_SHAPE.OVAL,
+                Inches(px), Inches(py), Inches(0.16), Inches(0.16))
+            dot.fill.solid(); dot.fill.fore_color.rgb = _rgb("2563EB")
+            dot.line.color.rgb = _rgb("FFFFFF"); dot.line.width = Pt(1)
+            # 标签
+            tb = slide.shapes.add_textbox(Inches(px + 0.18), Inches(py - 0.05),
+                Inches(1.4), Inches(0.24))
+            _set_text(tb.text_frame, p.get("name", "?"), size=9,
+                      color="1E293B", bold=True)
+
+    # 右侧象限解读
+    x_right = 8.0
+    for i, q in enumerate(("1", "2", "3", "4")):
+        y = 0.8 + i * 1.5
+        _add_summary_box(slide, x_right, y, 5.0, 1.35,
+                        f"第 {q} 象限 · {qlabels.get(q, '')}",
+                        qinsights.get(q, "—"),
+                        title_color="1E40AF", bg="F8FAFC", border="CBD5E1")
+
+    return _finish(prs)
+
+
+def build_pdpc_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    """PDPC: 简化树状 (step->risk->countermeasure)。"""
+    topic = payload.get("topic", "PDPC")
+    nodes = payload.get("nodes", [])
+    prs = _new_deck(f"PDPC · {topic}",
+                    "QCKit · Process Decision Program Chart · 风险 × 对策展开")
+    slide = prs.slides[0]
+
+    # 按 kind 分列
+    steps = [n for n in nodes if n.get("kind") == "step"]
+    top = 1.0
+    if steps:
+        col_w = 12.5 / max(len(steps), 1)
+        for i, s in enumerate(steps):
+            x = 0.4 + i * col_w
+            # step header
+            box = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                Inches(x), Inches(top), Inches(col_w - 0.1), Inches(0.5))
+            box.fill.solid(); box.fill.fore_color.rgb = _rgb("1E40AF")
+            box.line.fill.background()
+            _set_text(box.text_frame, f"步骤 {i+1} · {s.get('label','?')}",
+                      size=11, bold=True, color="FFFFFF", align=PP_ALIGN.CENTER)
+            # risks
+            risks = [n for n in nodes if n.get("parent") == s.get("id")
+                     and n.get("kind") == "risk"]
+            y_cur = top + 0.7
+            prio_bg = {"P1": ("FEE2E2", "DC2626"), "P2": ("FEF3C7", "D97706"),
+                       "P3": ("F1F5F9", "64748B")}
+            for r in risks[:3]:
+                prio = r.get("priority", "P3")
+                bg, bc = prio_bg.get(prio, ("F1F5F9", "64748B"))
+                rb = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                    Inches(x), Inches(y_cur), Inches(col_w - 0.1), Inches(0.7))
+                rb.fill.solid(); rb.fill.fore_color.rgb = _rgb(bg)
+                rb.line.color.rgb = _rgb(bc); rb.line.width = Pt(1.2)
+                tf = rb.text_frame; tf.word_wrap = True
+                tf.margin_left = Inches(0.05); tf.margin_top = Inches(0.03)
+                _set_text(tf, f"⚠ {r.get('label','')}", size=9, bold=True,
+                          color=bc, align=PP_ALIGN.LEFT)
+                pp = tf.add_paragraph(); pp.alignment = PP_ALIGN.LEFT
+                pr = pp.add_run()
+                pr.text = f"{prio} · P={r.get('probability','?')} I={r.get('impact','?')}"
+                pr.font.name = FONT; pr.font.size = Pt(8); pr.font.color.rgb = _rgb(bc)
+                y_cur += 0.85
+
+                # 对策
+                cms = [n for n in nodes if n.get("parent") == r.get("id")
+                       and n.get("kind") == "countermeasure"]
+                for cm in cms[:2]:
+                    cb = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                        Inches(x + 0.15), Inches(y_cur),
+                        Inches(col_w - 0.25), Inches(0.55))
+                    cb.fill.solid(); cb.fill.fore_color.rgb = _rgb("D1FAE5")
+                    cb.line.color.rgb = _rgb("10B981"); cb.line.width = Pt(1)
+                    tf = cb.text_frame; tf.word_wrap = True
+                    tf.margin_left = Inches(0.05); tf.margin_top = Inches(0.03)
+                    _set_text(tf, f"✓ {cm.get('label','')}", size=8, bold=True,
+                              color="065F46", align=PP_ALIGN.LEFT)
+                    y_cur += 0.65
+
+    # 结论页
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0,
+        prs.slide_width, Inches(0.6))
+    hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("DC2626")
+    hdr.line.fill.background()
+    _set_text(hdr.text_frame, f"高危路径 & 预案 · {topic}",
+              size=16, bold=True, color="FFFFFF", align=PP_ALIGN.LEFT)
+    hdr.text_frame.margin_left = Inches(0.3)
+    top_risks = "\n".join(
+        f"🔴 {r.get('risk','?')}  →  {r.get('action','?')} (score {r.get('score','?')})"
+        for r in (payload.get("top_risks") or [])[:6]) or "—"
+    recs = "\n".join(f"{i+1}. {r}" for i, r in enumerate(payload.get("recommendations", []) or ["—"]))
+    _add_summary_box(slide2, 0.35, 0.9, 6.3, 5.8, "🚨 Top 高危路径", top_risks,
+                     title_color="B91C1C", bg="FEF2F2", border="EF4444")
+    _add_summary_box(slide2, 6.85, 0.9, 6.13, 5.8, "🛡 预案要点", recs,
+                     title_color="065F46", bg="D1FAE5", border="10B981")
+    return _finish(prs)
+
+
+def build_arrow_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    """箭线图 CPM: 甘特图形式呈现 + 关键路径标红。"""
+    topic = payload.get("topic", "箭线图")
+    tasks = payload.get("tasks", [])
+    critical_set = set(payload.get("critical_path", []))
+    proj_dur = payload.get("project_duration", 0) or 1
+
+    prs = _new_deck(f"箭线图 · {topic}",
+                    f"QCKit · Arrow Diagram (CPM) · 总工期 {proj_dur}d · "
+                    f"关键路径 {len(critical_set)} 项")
+    slide = prs.slides[0]
+
+    # 甘特图区域
+    left = 2.5; top = 1.0
+    total_w = 10.5
+    row_h = min(0.35, 5.5 / max(len(tasks), 1))
+
+    for i, t in enumerate(tasks):
+        y = top + i * row_h
+        # 任务名
+        tb = slide.shapes.add_textbox(Inches(0.35), Inches(y),
+            Inches(2.05), Inches(row_h))
+        crit = t.get("name") in critical_set
+        _set_text(tb.text_frame,
+                  ("🔴 " if crit else "") + t.get("name", "?"),
+                  size=9, bold=crit,
+                  color="DC2626" if crit else "1E293B", align=PP_ALIGN.LEFT)
+        # 甘特条
+        es = float(t.get("es", 0))
+        dur = float(t.get("duration", 0))
+        bar_x = left + (es / proj_dur) * total_w
+        bar_w = max(0.05, (dur / proj_dur) * total_w)
+        bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+            Inches(bar_x), Inches(y + 0.05),
+            Inches(bar_w), Inches(row_h - 0.1))
+        bg, bc = ("EF4444", "DC2626") if crit else ("60A5FA", "2563EB")
+        bar.fill.solid(); bar.fill.fore_color.rgb = _rgb(bg)
+        bar.line.color.rgb = _rgb(bc); bar.line.width = Pt(0.75)
+        # 工期文字
+        if bar_w > 0.6:
+            _set_text(bar.text_frame, f"{dur:g}d", size=8, bold=True,
+                      color="FFFFFF", align=PP_ALIGN.CENTER)
+        # 浮时
+        slack = t.get("slack", 0)
+        if slack and slack > 0:
+            slack_x = bar_x + bar_w
+            slack_w = (float(slack) / proj_dur) * total_w
+            if slack_w > 0.05:
+                sb = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                    Inches(slack_x), Inches(y + 0.1),
+                    Inches(slack_w), Inches(row_h - 0.2))
+                sb.fill.solid(); sb.fill.fore_color.rgb = _rgb("E5E7EB")
+                sb.line.fill.background()
+
+    # 时间轴
+    axis_y = top + len(tasks) * row_h + 0.1
+    ln = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+        Inches(left), Inches(axis_y),
+        Inches(left + total_w), Inches(axis_y))
+    ln.line.color.rgb = _rgb("94A3B8"); ln.line.width = Pt(1)
+    for i in range(6):
+        tick = i / 5 * proj_dur
+        tx = left + i / 5 * total_w
+        tb = slide.shapes.add_textbox(Inches(tx - 0.2), Inches(axis_y + 0.05),
+            Inches(0.4), Inches(0.25))
+        _set_text(tb.text_frame, f"{tick:.0f}d", size=8, color="64748B",
+                  align=PP_ALIGN.CENTER)
+
+    # 结论页
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0,
+        prs.slide_width, Inches(0.6))
+    hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("DC2626")
+    hdr.line.fill.background()
+    _set_text(hdr.text_frame, f"关键路径 & 资源冲突 · {topic}",
+              size=16, bold=True, color="FFFFFF", align=PP_ALIGN.LEFT)
+    hdr.text_frame.margin_left = Inches(0.3)
+    cp = " → ".join(payload.get("critical_path", [])) or "—"
+    conflicts = "\n".join(
+        f"⚠️ {c.get('owner','?')}: {'/'.join(c.get('tasks',[]))} — {c.get('advice','')}"
+        for c in (payload.get("resource_conflicts") or [])[:6]) or "—"
+    _add_summary_box(slide2, 0.35, 0.9, 12.6, 1.8,
+                     f"🔴 关键路径 (总工期 {proj_dur}d)", cp,
+                     title_color="B91C1C", bg="FEF2F2", border="EF4444")
+    _add_summary_box(slide2, 0.35, 2.9, 6.3, 3.8, "⚙ 资源冲突", conflicts,
+                     title_color="B45309", bg="FEF3C7", border="F59E0B")
+    recs = "\n".join(f"{i+1}. {r}" for i, r in enumerate(payload.get("recommendations", []) or ["—"]))
+    _add_summary_box(slide2, 6.85, 2.9, 6.13, 3.8, "💡 优化建议", recs,
+                     title_color="065F46", bg="D1FAE5", border="10B981")
+    return _finish(prs)
+
+
+def _finish(prs) -> io.BytesIO:
+    _add_footer(prs)
+    buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf

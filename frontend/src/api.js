@@ -64,6 +64,11 @@ export const analyzeW5H2      = (p) => api.post('/tools/w5h2/analyze',      p).t
 export const analyzeRca       = (p) => api.post('/tools/rca/analyze',       p).then(r => r.data)
 export const analyzeFishbone  = (p) => api.post('/tools/fishbone/analyze',  p).then(r => r.data)
 export const analyzeQccGuide  = (p) => api.post('/tools/qcc_guide/analyze', p).then(r => r.data)
+export const analyzeTree      = (p) => api.post('/tools/tree/analyze',      p).then(r => r.data)
+export const analyzeMatrix    = (p) => api.post('/tools/matrix/analyze',    p).then(r => r.data)
+export const analyzeMda       = (p) => api.post('/tools/mda/analyze',       p).then(r => r.data)
+export const analyzePdpc      = (p) => api.post('/tools/pdpc/analyze',      p).then(r => r.data)
+export const analyzeArrow     = (p) => api.post('/tools/arrow/analyze',     p).then(r => r.data)
 
 // 通用: 下载文件（pptx / xlsx / …）
 export async function downloadFile (tool, format, payload, filename) {
