@@ -30,6 +30,7 @@
           <el-checkbox v-model="useLlm" size="small">未填字段用 AI 补全</el-checkbox>
         </div>
       </div>
+      <ToolkitBar :toolkit="toolkit" />
       <el-form label-position="top" size="default">
         <el-form-item label="主题">
           <el-input v-model="topic" placeholder="如：焊接工序不良率偏高的要因确认" />
@@ -158,9 +159,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { analyzeRca, downloadPptx, downloadXlsx } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 const AI_FIELDS = ['content','method','result','is_key']
 const ALL_FIELDS = ['content','method','result','owner','due','is_key']
@@ -180,6 +183,26 @@ const pasteText = ref('')
 
 const progress = ref(0); const elapsed = ref(0)
 let progressTimer = null, elapsedTimer = null
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: '', problem: '', end_causes_text: '' })
+watch(form, () => {
+  if (form.topic !== undefined) topic.value = form.topic
+  // problem 作为背景/症结描述, 填到 context
+  if (form.problem !== undefined && form.problem) context.value = form.problem
+  // end_causes_text: 每行一条末端原因 -> 拆成 rows(症结沿用 problem)
+  if (form.end_causes_text !== undefined && form.end_causes_text) {
+    const causes = String(form.end_causes_text).split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+    if (causes.length) {
+      const sym = form.problem || form.topic || '症结'
+      rows.splice(0, rows.length, ...causes.map(c => ({
+        symptom: sym, cause: c, content:'', method:'', result:'', owner:'', due:'', is_key:''
+      })))
+      Object.keys(inferredMap).forEach(k => delete inferredMap[k])
+    }
+  }
+}, { deep: true })
+const toolkit = useToolkit('rca', form)
 
 function blankRow() {
   return { symptom:'', cause:'', content:'', method:'', result:'', owner:'', due:'', is_key:'' }
@@ -306,6 +329,11 @@ async function run() {
       else delete inferredMap[i]
     }
     reasoning.value = resp.reasoning || ''
+    toolkit.saveHistory(resp, {
+      topic: topic.value,
+      problem: context.value,
+      end_causes_text: valid.map(r => r.cause).join('\n'),
+    })
     if (useLlm.value) stopProgress()
     const total = Object.values(inferredMap).reduce((a, s) => a + s.size, 0)
     ElMessage.success(total ? `AI 补全 ${total} 个字段` : '保存完成')

@@ -30,6 +30,7 @@
       <el-col :md="7" :xs="24">
         <div class="qc-panel">
           <div class="qc-panel-hd">📝 输入</div>
+          <ToolkitBar :toolkit="toolkit" />
           <el-form label-position="top" size="default" class="qc-form">
             <el-form-item label="主题 / 情境">
               <el-input v-model="topic" placeholder="如：车间班组会议改善提案" />
@@ -171,9 +172,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { analyzeAffinity, downloadPptx } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('车间班组会议改善提案')
 const itemsText = ref('')
@@ -186,6 +189,15 @@ const groups = ref([])          // [{id,name,summary,items:[],priority}]
 const pool = ref([])            // 未分类条目
 const insights = ref('')
 const recommendations = ref([])
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: topic.value, context: '', raw_items: '' })
+watch(form, () => {
+  if (form.topic !== undefined) topic.value = form.topic
+  if (form.context !== undefined) context.value = form.context
+  if (form.raw_items !== undefined) itemsText.value = form.raw_items
+}, { deep: true })
+const toolkit = useToolkit('affinity', form)
 
 // 进度
 const stages = ['发送请求到 LLM', '模型思考并聚类（1-3 分钟）', '整理分组结果', '渲染看板']
@@ -254,6 +266,7 @@ async function run() {
     pool.value = []
     insights.value = resp.insights || ''
     recommendations.value = resp.recommendations || []
+    toolkit.saveHistory(resp, { topic: topic.value, context: context.value, raw_items: itemsText.value })
     await nextTick()
     stopProgress(true)
     ElMessage.success(`分析完成，${groups.value.length} 组 / 用时 ${elapsed.value}s`)

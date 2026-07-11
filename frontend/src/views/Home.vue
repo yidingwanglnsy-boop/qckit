@@ -21,17 +21,58 @@
     <el-alert
       v-if="!tools.length" type="info" :closable="false"
       title="正在加载工具..." />
+
+    <!-- 首次启动引导 -->
+    <el-dialog v-model="showWizard" title="👋 欢迎使用 QCKit"
+      width="560px" :close-on-click-modal="false" :show-close="false">
+      <div style="line-height:1.8;font-size:14px;">
+        <p><strong>1 分钟接入 AI, 开始你的第一个 QCC 分析:</strong></p>
+        <ol style="padding-left:20px;margin:12px 0;">
+          <li>准备 LLM API Key（推荐 <a href="https://dashscope.aliyun.com" target="_blank">通义千问</a> /
+            <a href="https://platform.deepseek.com" target="_blank">DeepSeek</a> —— 都有免费额度）</li>
+          <li>点下方【前往设置】，粘贴 Key 并保存</li>
+          <li>任选一个工具，点【一键填入示例】看看效果</li>
+        </ol>
+        <el-alert type="info" :closable="false" show-icon
+          style="margin-top:12px;"
+          title="没有 Key 也可以先探索界面, 但 AI 分析功能不可用" />
+      </div>
+      <template #footer>
+        <el-button @click="skipWizard">稍后再说</el-button>
+        <el-button type="primary" @click="gotoSettings">前往设置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { listTools } from '../api'
+import { listTools, getConfig } from '../api'
 
 const tools = ref([])
 const router = useRouter()
+const showWizard = ref(false)
 
-onMounted(async () => { tools.value = await listTools() })
+onMounted(async () => {
+  tools.value = await listTools()
+  // 引导条件: 未曾跳过, 且 config 无 api_key
+  if (!localStorage.getItem('qckit.wizardSkipped')) {
+    try {
+      const cfg = await getConfig()
+      if (!cfg.llm?.api_key) showWizard.value = true
+    } catch {} // 后端未启动就静默
+  }
+})
+
+function skipWizard () {
+  localStorage.setItem('qckit.wizardSkipped', '1')
+  showWizard.value = false
+}
+function gotoSettings () {
+  localStorage.setItem('qckit.wizardSkipped', '1')
+  showWizard.value = false
+  router.push('/settings')
+}
 function open(t) { router.push(`/tools/${t.key}`) }
 </script>

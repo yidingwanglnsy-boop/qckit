@@ -22,6 +22,7 @@
       <el-col :md="10" :xs="24">
         <div class="qc-panel">
           <div class="qc-panel-hd">📝 输入</div>
+          <ToolkitBar :toolkit="toolkit" />
           <el-form label-position="top" size="default" class="qc-form">
             <el-form-item label="主题">
               <el-input v-model="topic" placeholder="如：Q3 供应商综合评估" />
@@ -203,10 +204,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { analyzeRadar, downloadPptx } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('')
 const maxScore = ref(10)
@@ -223,6 +226,23 @@ const result = ref(null)
 const chartEl = ref(null)
 const pptxLoading = ref(false)
 let chart = null
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: '', subject: '', dimensions: [] })
+watch(form, () => {
+  if (form.topic !== undefined) topic.value = form.topic
+  if (Array.isArray(form.dimensions) && form.dimensions.length) {
+    // sample: [{name,value,target}] => 视图: dimensions=[names], entities[0]={name:subject, scores:[value...]}
+    const dims = form.dimensions.map(d => d.name).filter(Boolean)
+    if (dims.length) {
+      dimensions.value = dims
+      const scores = form.dimensions.map(d => Number(d.value) || 0)
+      const entName = form.subject || '对象 1'
+      entities.value = [{ name: entName, scores }]
+    }
+  }
+}, { deep: true })
+const toolkit = useToolkit('radar', form)
 
 const progress = ref(0); const elapsed = ref(0)
 let progressTimer = null, elapsedTimer = null
@@ -301,6 +321,11 @@ async function run() {
       context: useLlm.value ? context.value : '',
     })
     result.value = resp
+    toolkit.saveHistory(resp, {
+      topic: topic.value,
+      subject: valid[0]?.name || '',
+      dimensions: dimensions.value.map((n, i) => ({ name: n, value: valid[0]?.scores[i] ?? 0 })),
+    })
     await nextTick()
     renderChart()
     if (useLlm.value) stopProgress()

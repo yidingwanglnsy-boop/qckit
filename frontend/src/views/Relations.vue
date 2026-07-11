@@ -30,6 +30,7 @@
       <el-col :md="7" :xs="24">
         <div class="qc-panel">
           <div class="qc-panel-hd">📝 输入</div>
+          <ToolkitBar :toolkit="toolkit" />
           <el-form label-position="top" size="default" class="qc-form">
             <el-form-item label="问题主题">
               <el-input v-model="topic" placeholder="如：产线A车间不良率高" />
@@ -171,11 +172,13 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import cytoscape from 'cytoscape'
 import fcose from 'cytoscape-fcose'
 import { analyzeRelations, downloadPptx } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 cytoscape.use(fcose)
 
@@ -187,6 +190,15 @@ const loading = ref(false)
 const result = ref(null)
 const tab = ref('summary')
 const cyEl = ref(null)
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: topic.value, raw_causes: '', context: '' })
+watch(form, () => {
+  topic.value = form.topic || topic.value
+  if (form.raw_causes !== undefined) nodesText.value = form.raw_causes
+  if (form.context !== undefined) context.value = form.context
+}, { deep: true })
+const toolkit = useToolkit('relations', form)
 let cy = null
 
 // —— 角色可视化配置（标准关联图配色：低饱和 + 明确层级） —— //
@@ -251,6 +263,7 @@ async function run() {
     const resp = await analyzeRelations({ topic: topic.value, nodes, context: context.value })
     stageIdx.value = 2; progress.value = 92
     result.value = resp
+    toolkit.saveHistory(resp, { topic: topic.value, raw_causes: nodesText.value, context: context.value })
     await nextTick()
     render()
     stopProgress(true)

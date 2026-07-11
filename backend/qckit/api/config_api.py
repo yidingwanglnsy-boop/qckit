@@ -19,8 +19,8 @@ def read_config() -> dict:
 @router.post("")
 def update_config(payload: LLMConfig) -> dict:
     cfg = get_config()
-    # 保留旧 key 如果新值是掩码或空
-    if not payload.api_key or "*" in payload.api_key:
+    # 保留旧 key 如果新值是掩码 (含 * 或 …) 或空
+    if not payload.api_key or "*" in payload.api_key or "…" in payload.api_key:
         payload.api_key = cfg.llm.api_key
     new_cfg = AppConfig(llm=payload)
     set_config(new_cfg)

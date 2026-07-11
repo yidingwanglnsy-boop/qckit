@@ -30,6 +30,7 @@
           <el-checkbox v-model="useLlm" size="small">未填字段用 AI 补全</el-checkbox>
         </div>
       </div>
+      <ToolkitBar :toolkit="toolkit" />
       <el-form label-position="top" size="default">
         <el-form-item label="主题">
           <el-input v-model="topic" placeholder="如：焊接工序不良率偏高" />
@@ -145,9 +146,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { analyzeW5H2, downloadPptx, downloadXlsx } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 const cols = ['why','what','where','when','who','how','how_much']
 
@@ -166,6 +169,14 @@ const pasteText = ref('')
 
 const progress = ref(0); const elapsed = ref(0)
 let progressTimer = null, elapsedTimer = null
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: '', context: '' })
+watch(form, () => {
+  if (form.topic !== undefined) topic.value = form.topic
+  if (form.context !== undefined) context.value = form.context
+}, { deep: true })
+const toolkit = useToolkit('w5h2', form)
 
 function blankRow() {
   return { why:'', what:'', where:'', when:'', who:'', how:'', how_much:'' }
@@ -276,6 +287,7 @@ async function run() {
       else delete inferredMap[i]
     }
     reasoning.value = resp.reasoning || ''
+    toolkit.saveHistory(resp, { topic: topic.value, context: context.value })
     if (useLlm.value) stopProgress()
     const total = Object.values(inferredMap).reduce((a, s) => a + s.size, 0)
     ElMessage.success(total ? `AI 补全 ${total} 个字段` : '保存完成')

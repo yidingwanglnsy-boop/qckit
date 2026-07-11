@@ -51,6 +51,22 @@ class AppConfig(BaseModel):
             yaml.safe_dump(self.model_dump(), allow_unicode=True, sort_keys=False),
             encoding="utf-8",
         )
+        # 保护 API Key: 强制 0600
+        try:
+            os.chmod(CONFIG_FILE, 0o600)
+            os.chmod(CONFIG_DIR, 0o700)
+        except OSError:
+            pass  # Windows / 不支持 chmod
+
+    def masked(self) -> dict:
+        """返回脱敏后的配置字典 —— API Key 只保留前 4 + 后 4 位。"""
+        d = self.model_dump()
+        key = d.get("llm", {}).get("api_key", "") or ""
+        if len(key) > 8:
+            d["llm"]["api_key"] = key[:4] + "…" + key[-4:]
+        elif key:
+            d["llm"]["api_key"] = "…"
+        return d
 
 
 _cached: Optional[AppConfig] = None

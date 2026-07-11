@@ -22,6 +22,7 @@
       <el-col :md="9" :xs="24">
         <div class="qc-panel">
           <div class="qc-panel-hd">📝 输入</div>
+          <ToolkitBar :toolkit="toolkit" />
           <el-form label-position="top" size="default" class="qc-form">
             <el-form-item label="主题">
               <el-input v-model="topic" placeholder="如：注塑车间不良类型分布" />
@@ -184,10 +185,12 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, reactive, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { analyzePareto, downloadPptx } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('注塑车间不良类型分布')
 const metric = ref('频次')
@@ -199,6 +202,24 @@ const loading = ref(false)
 const result = ref(null)
 const chartEl = ref(null)
 let chart = null
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: topic.value, metric: metric.value, threshold: threshold.value, raw_data: '' })
+watch(form, () => {
+  if (form.topic !== undefined) topic.value = form.topic
+  if (form.metric !== undefined) metric.value = form.metric
+  if (form.threshold !== undefined) threshold.value = form.threshold
+  if (form.raw_data !== undefined && form.raw_data) {
+    // "name,value" per line -> items[]
+    const parsed = String(form.raw_data).split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      .map(line => {
+        const [name, val] = line.split(',')
+        return { name: (name || '').trim(), value: Number(val) || 0 }
+      }).filter(it => it.name)
+    if (parsed.length) items.value = parsed
+  }
+}, { deep: true })
+const toolkit = useToolkit('pareto', form)
 
 const stages = ['发送请求到 LLM', '模型分析（1-3 分钟）', '整理结果', '渲染图表']
 const stageIdx = ref(0); const progress = ref(0); const elapsed = ref(0)
@@ -257,6 +278,10 @@ async function run() {
     })
     if (useLlm.value) { stageIdx.value = 2; progress.value = 92 }
     result.value = resp
+    toolkit.saveHistory(resp, {
+      topic: topic.value, metric: metric.value, threshold: threshold.value,
+      raw_data: clean.map(i => `${i.name},${i.value}`).join('\n'),
+    })
     await nextTick()
     renderChart()
     if (useLlm.value) stopProgress(true)

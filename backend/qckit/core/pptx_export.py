@@ -52,6 +52,30 @@ def _set_text(tf, text: str, *, size: int = 14, bold: bool = False,
     run.font.color.rgb = _rgb(color)
 
 
+def _add_footer(prs, subtitle_hint: str = "") -> None:
+    """给每一页底部加统一品牌页脚 —— QCKit · <hint>。"""
+    for slide in prs.slides:
+        # 底部横线
+        line_y = prs.slide_height - Inches(0.28)
+        ln = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+            Inches(0.35), line_y,
+            prs.slide_width - Inches(0.35), line_y)
+        ln.line.color.rgb = _rgb("E5E7EB"); ln.line.width = Pt(0.5)
+        # 左下: 品牌
+        left = slide.shapes.add_textbox(
+            Inches(0.35), prs.slide_height - Inches(0.25),
+            Inches(6), Inches(0.22))
+        _set_text(left.text_frame, f"QCKit · {subtitle_hint}" if subtitle_hint else "QCKit",
+                  size=8, color="94A3B8", align=PP_ALIGN.LEFT)
+        # 右下: 页码占位 (由 PPT 自身页码机制维护; 这里直接留一句 slogan)
+        right = slide.shapes.add_textbox(
+            prs.slide_width - Inches(4.35), prs.slide_height - Inches(0.25),
+            Inches(4), Inches(0.22))
+        _set_text(right.text_frame,
+                  "AI 驱动的 QCC 质量工具箱  ·  qckit.dev",
+                  size=8, color="94A3B8", align=PP_ALIGN.RIGHT)
+
+
 def _new_deck(title: str, subtitle: str = "") -> Presentation:
     prs = Presentation()
     prs.slide_width = Inches(13.333)
@@ -374,6 +398,7 @@ def build_relations_pptx(payload: dict[str, Any]) -> io.BytesIO:
             run.font.color.rgb = _rgb("1F2937")
 
     buf = io.BytesIO()
+    _add_footer(prs)
     prs.save(buf); buf.seek(0)
     return buf
 
@@ -502,6 +527,7 @@ def build_affinity_pptx(payload: dict[str, Any]) -> io.BytesIO:
             run.font.color.rgb = _rgb("1F2937")
 
     buf = io.BytesIO()
+    _add_footer(prs)
     prs.save(buf); buf.seek(0)
     return buf
 
@@ -524,6 +550,7 @@ def build_pareto_pptx(payload: dict[str, Any]) -> io.BytesIO:
                     f"QCKit · Pareto Diagram · 度量: {metric} · 合计: {total}")
     slide = prs.slides[0]
     if not items:
+        _add_footer(prs)
         buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
 
     cats = [i["name"] for i in items]
@@ -659,6 +686,7 @@ def build_pareto_pptx(payload: dict[str, Any]) -> io.BytesIO:
             run.font.name = FONT; run.font.size = Pt(12)
             run.font.color.rgb = _rgb("1F2937")
 
+    _add_footer(prs)
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf
 
@@ -682,6 +710,7 @@ def build_radar_pptx(payload: dict[str, Any]) -> io.BytesIO:
                     f"QCKit · Radar · 维度 {len(dims)} · 对象 {len(entities)} · 满分 {max_s:g}")
     slide = prs.slides[0]
     if not dims or not entities:
+        _add_footer(prs)
         buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
 
     # 原生雷达图
@@ -803,6 +832,7 @@ def build_radar_pptx(payload: dict[str, Any]) -> io.BytesIO:
             run.font.name = FONT; run.font.size = Pt(12)
             run.font.color.rgb = _rgb("1F2937")
 
+    _add_footer(prs)
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf
 
@@ -822,6 +852,7 @@ def build_w5h2_pptx(payload: dict[str, Any]) -> io.BytesIO:
     slide = prs.slides[0]
 
     if not rows:
+        _add_footer(prs)
         buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
 
     headers = ["#", "Why 根因", "What", "Where", "When", "Who", "How", "How Much"]
@@ -925,6 +956,7 @@ def build_w5h2_pptx(payload: dict[str, Any]) -> io.BytesIO:
         r = p.add_run(); r.text = reasoning
         r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("451A03")
 
+    _add_footer(prs)
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf
 
@@ -950,6 +982,7 @@ def build_rca_pptx(payload: dict[str, Any]) -> io.BytesIO:
                     f"QCKit · 要因确认 · {len(rows)} 条末端原因")
     slide = prs.slides[0]
     if not rows:
+        _add_footer(prs)
         buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
 
     headers = ["#", "症结", "末端原因", "确认内容", "确认方法",
@@ -1065,5 +1098,6 @@ def build_rca_pptx(payload: dict[str, Any]) -> io.BytesIO:
         r = p.add_run(); r.text = reasoning
         r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("451A03")
 
+    _add_footer(prs)
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf

@@ -26,6 +26,7 @@
       <el-col :md="8" :xs="24">
         <div class="qc-panel">
           <div class="qc-panel-hd">📝 输入</div>
+          <ToolkitBar :toolkit="toolkit" />
           <el-form label-position="top" size="default">
             <el-form-item label="鱼头（问题 / 结果）">
               <el-input v-model="topic" placeholder="如：焊接工序不良率偏高" />
@@ -183,9 +184,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { analyzeFishbone, downloadPptx, getBrand } from '../api'
+import ToolkitBar from '../components/ToolkitBar.vue'
+import { useToolkit } from '../composables/useToolkit'
 
 const topic = ref('')
 const context = ref('')
@@ -199,6 +202,25 @@ const loading = ref(false)
 const pptxLoading = ref(false)
 const progress = ref(0); const elapsed = ref(0)
 let progressTimer = null, elapsedTimer = null
+
+// —— 示例数据 & 历史记录 —— //
+const form = reactive({ topic: '', statement: '', layers: 2, categories: [] })
+watch(form, () => {
+  if (form.topic !== undefined) topic.value = form.topic
+  if (form.statement !== undefined && form.statement) context.value = form.statement
+  if (form.layers !== undefined && form.layers) layers.value = form.layers
+  // categories: sample 结构 [{name, children:[{name}, ...]}] -> 铺平到 causesText 每行一条末端
+  if (Array.isArray(form.categories) && form.categories.length) {
+    const leaves = []
+    const walk = (nodes) => nodes.forEach(n => {
+      if (n.children && n.children.length) walk(n.children)
+      else if (n.name) leaves.push(n.name)
+    })
+    walk(form.categories)
+    if (leaves.length) causesText.value = leaves.join('\n')
+  }
+}, { deep: true })
+const toolkit = useToolkit('fishbone', form)
 
 const brand = reactive({
   primary:'0F172A', secondary:'1E3A8A', accent:'DC2626',
@@ -378,6 +400,12 @@ async function run() {
     })
     categories.value = resp.categories
     reasoning.value = resp.reasoning
+    toolkit.saveHistory(resp, {
+      topic: topic.value,
+      statement: context.value,
+      layers: layers.value,
+      categories: resp.categories || [],
+    })
     stopProgress()
     ElMessage.success('已生成')
   } catch (e) {

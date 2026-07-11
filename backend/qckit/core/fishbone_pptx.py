@@ -171,15 +171,43 @@ def build_fishbone_pptx(payload: dict[str, Any], brand: BrandConfig) -> io.Bytes
         lr.font.color.rgb = _rgb(brand.text_on_primary)
         lbl.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-        # 中骨 / 末端
+        # 中骨 / 末端  —— 动态密度自适应
         children = cat.get("children") or []
         n = max(len(children), 1)
-        sub_line_len   = 1_400_000                     # 水平中骨长度
-        leaf_font_size = 10
+        # n≥4 时: 沿大骨密度不足, 改用"外端垂直列表"模式
+        DENSE_LIST_MODE = n >= 4 and layers >= 2
+
+        # 中骨数越多, 中骨越短、字号越小、间距越紧凑
+        if n <= 3:
+            sub_line_len, mid_font, leaf_font_size, t_span = 1_400_000, 11, 10, (0.20, 0.85)
+        elif n <= 5:
+            sub_line_len, mid_font, leaf_font_size, t_span = 1_250_000, 10,  9, (0.15, 0.92)
+        else:
+            sub_line_len, mid_font, leaf_font_size, t_span = 1_100_000,  9,  8, (0.12, 0.95)
+
+        if DENSE_LIST_MODE:
+            # 大骨末端外挂垂直列表: 一条主中骨引出, 末端因换行排列
+            # 引出线: 从大骨末端 (ex, ey) 向外(左)延伸 300k
+            list_x_end = ex - 300_000
+            _line(slide, ex, ey, list_x_end, ey, _tint(brand.text, 0.45), 1.75)
+            # 列表框位置: 在引出线的外端
+            list_w = 1_900_000
+            row_h = 220_000
+            list_h = row_h * n + 60_000
+            list_x = list_x_end - list_w
+            list_y = ey - list_h - 30_000 if up else ey + 30_000
+            # 每条末端因: 前缀 · 分行显示
+            for si, sub in enumerate(children):
+                item_y = list_y + si * row_h + 30_000
+                mclr = _tint(brand.warn, 0.35) if sub.get("inferred") else brand.secondary
+                _text(slide, list_x, item_y, list_w, row_h,
+                      f"· {sub.get('name','')}", font=fz, size=mid_font,
+                      color=mclr, bold=False, anchor="r")
+            continue  # 跳过下方 for 循环
 
         for si, sub in enumerate(children):
             # 沿大骨方向的比例 t (从外端到 attach 点), 避开两端
-            t = 0.25 + 0.55 * (si + 0.5) / n
+            t = t_span[0] + (t_span[1] - t_span[0]) * (si + 0.5) / n
             bx = int(ex + (ax - ex) * t)
             by = int(ey + (ay - ey) * t)
 
@@ -196,8 +224,10 @@ def build_fishbone_pptx(payload: dict[str, Any], brand: BrandConfig) -> io.Bytes
             mx1 = bx - sub_line_len
             _line(slide, mx1, by, bx, by, _tint(brand.text, 0.45), 1.75)
             mclr = _tint(brand.warn, 0.35) if sub.get("inferred") else brand.secondary
-            _text(slide, mx1 - 40_000, by - 260_000, sub_line_len, 240_000,
-                  sub.get("name", ""), font=fz, size=11,
+            # 文字放到中骨"反侧" (上骨向上, 下骨向下)
+            text_y_off = -230_000 if up else 40_000
+            _text(slide, mx1 - 40_000, by + text_y_off, sub_line_len, 200_000,
+                  sub.get("name", ""), font=fz, size=mid_font,
                   color=mclr, bold=True, anchor="r")
 
             if layers == 3:
