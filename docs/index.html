@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QCKit · LLM 驱动的开源质量工具箱</title>
+<meta name="description" content="QCKit 是一款 LLM 驱动的开源质量工具箱：QCC 思路生成、鱼骨图、关联图、5W2H、根因分析、柏拉图，全部支持 AI 自动生成 + 手工编辑 + PPTX/Excel 一键导出。" />
+<meta name="keywords" content="QCKit, QCC, 品管圈, 质量工具, 鱼骨图, 关联图, 5W2H, 根因分析, RCA, LLM, AI, 开源" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="QCKit · LLM 驱动的开源质量工具箱" />
+<meta property="og:description" content="输入几个节点，AI 自动出图 + 出报告 + 一键 PPT。开源 · 本地部署 · 品牌可定制。" />
+<meta property="og:url" content="https://yidingwanglnsy-boop.github.io/qckit/" />
+<meta property="og:type" content="website" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;600;800&display=swap" rel="stylesheet" />
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --bg: #0f172a;
+  --bg-2: #1e293b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --card: #1e293b;
+  --border: #334155;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+.container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+/* ── Nav ─────────────────────────── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(15, 23, 42, .85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1120px; margin: 0 auto; padding: 14px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.brand {
+  font-size: 22px; font-weight: 800; letter-spacing: -.5px;
+  background: linear-gradient(135deg, #a5b4fc, #f0abfc);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { color: var(--muted); font-size: 14px; transition: color .15s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #fff !important; padding: 8px 16px; border-radius: 8px;
+  font-weight: 600; font-size: 13px !important;
+  box-shadow: 0 2px 10px rgba(99,102,241,.3);
+  transition: transform .15s, box-shadow .15s;
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,102,241,.5); }
+@media (max-width: 720px) { .nav-links a:not(.nav-cta) { display: none; } }
+
+/* ── Hero ────────────────────────── */
+.hero {
+  position: relative; padding: 100px 20px 80px; text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(99,102,241,.25), transparent 50%),
+    radial-gradient(circle at 80% 60%, rgba(139,92,246,.2), transparent 50%),
+    radial-gradient(circle at 50% 90%, rgba(236,72,153,.15), transparent 50%);
+  z-index: -1;
+}
+.badges {
+  display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.badge {
+  background: rgba(99,102,241,.15); color: #a5b4fc;
+  padding: 4px 12px; border-radius: 20px; font-size: 12px;
+  border: 1px solid rgba(99,102,241,.3);
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 60px);
+  font-weight: 800; letter-spacing: -1.5px;
+  line-height: 1.15; margin-bottom: 18px;
+}
+.hero h1 .accent {
+  background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  font-size: 18px; color: var(--muted); max-width: 720px;
+  margin: 0 auto 34px; line-height: 1.75;
+}
+.cta {
+  display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;
+}
+.btn {
+  padding: 12px 26px; border-radius: 10px; font-weight: 600;
+  font-size: 15px; transition: all .15s; display: inline-flex;
+  align-items: center; gap: 8px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #fff; box-shadow: 0 4px 20px rgba(99,102,241,.4);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(99,102,241,.55); }
+.btn-ghost {
+  background: rgba(255,255,255,.06); color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: rgba(255,255,255,.1); border-color: var(--muted); }
+
+/* Hero screenshot placeholder */
+.hero-shot {
+  margin: 60px auto 0; max-width: 900px;
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  aspect-ratio: 16 / 9;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.hero-shot::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 32px;
+  background: #0f172a; border-bottom: 1px solid var(--border);
+}
+.hero-shot::after {
+  content: '● ● ●'; position: absolute; top: 6px; left: 14px;
+  color: #475569; font-size: 12px; letter-spacing: 4px;
+}
+.shot-content {
+  padding: 40px; color: var(--muted); font-size: 14px;
+  text-align: center;
+}
+.shot-content .demo-emoji { font-size: 60px; margin-bottom: 18px; }
+
+/* ── Sections ────────────────────── */
+section { padding: 90px 20px; }
+.section-head {
+  text-align: center; margin-bottom: 60px;
+}
+.section-tag {
+  display: inline-block; color: var(--primary); font-size: 13px;
+  font-weight: 600; letter-spacing: 2px; margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.section-title {
+  font-size: clamp(28px, 4vw, 40px); font-weight: 800;
+  letter-spacing: -1px; margin-bottom: 14px;
+}
+.section-sub {
+  color: var(--muted); font-size: 16px; max-width: 620px; margin: 0 auto;
+}
+
+/* Pain -> Cure */
+.pain-cure {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+  align-items: start;
+}
+@media (max-width: 720px) { .pain-cure { grid-template-columns: 1fr; } }
+.pc-card {
+  padding: 30px; border-radius: 14px;
+  border: 1px solid var(--border);
+}
+.pc-card.pain { background: rgba(239,68,68,.06); border-color: rgba(239,68,68,.2); }
+.pc-card.cure { background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.2); }
+.pc-card h3 { font-size: 20px; margin-bottom: 18px; }
+.pc-card.pain h3 { color: #fca5a5; }
+.pc-card.cure h3 { color: #86efac; }
+.pc-card ul { list-style: none; }
+.pc-card li {
+  padding: 10px 0; padding-left: 28px; position: relative;
+  color: var(--text); font-size: 15px; line-height: 1.6;
+}
+.pc-card.pain li::before {
+  content: '✗'; position: absolute; left: 0; color: #f87171; font-weight: 700;
+}
+.pc-card.cure li::before {
+  content: '✓'; position: absolute; left: 0; color: #4ade80; font-weight: 700;
+}
+
+/* Features Grid */
+.features {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+}
+@media (max-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .features { grid-template-columns: 1fr; } }
+.feature {
+  background: var(--card); padding: 26px; border-radius: 12px;
+  border: 1px solid var(--border);
+  transition: transform .2s, border-color .2s;
+}
+.feature:hover { transform: translateY(-4px); border-color: var(--primary); }
+.feature-emoji { font-size: 32px; margin-bottom: 14px; }
+.feature h3 { font-size: 17px; margin-bottom: 8px; }
+.feature p { color: var(--muted); font-size: 13.5px; line-height: 1.65; }
+
+/* Tools */
+.tools-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+@media (max-width: 900px) { .tools-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .tools-grid { grid-template-columns: 1fr; } }
+.tool-card {
+  background: var(--card); padding: 22px 20px; border-radius: 12px;
+  border: 1px solid var(--border); position: relative;
+  transition: transform .2s, border-color .2s;
+}
+.tool-card:hover { transform: translateY(-3px); border-color: var(--purple); }
+.tool-emoji { font-size: 28px; margin-bottom: 10px; }
+.tool-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.tool-desc { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.tool-tag {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(99,102,241,.2); color: #a5b4fc;
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Providers */
+.providers {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  max-width: 900px; margin: 0 auto;
+}
+@media (max-width: 720px) { .providers { grid-template-columns: repeat(2, 1fr); } }
+.prov {
+  background: var(--card); padding: 18px 16px; border-radius: 10px;
+  border: 1px solid var(--border); text-align: center;
+  transition: transform .15s;
+}
+.prov:hover { transform: translateY(-2px); }
+.prov-emoji { font-size: 26px; margin-bottom: 8px; }
+.prov-name { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+.prov-desc { color: var(--muted); font-size: 11.5px; }
+
+/* Steps */
+.steps {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  margin-top: 40px;
+}
+@media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+.step {
+  background: var(--card); padding: 26px; border-radius: 12px;
+  border: 1px solid var(--border); position: relative;
+}
+.step-num {
+  position: absolute; top: -18px; left: 24px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #fff; width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+  box-shadow: 0 4px 14px rgba(99,102,241,.4);
+}
+.step h3 { margin: 16px 0 8px; font-size: 17px; }
+.step p { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+.step code {
+  display: block; background: #0f172a; padding: 10px 14px;
+  border-radius: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px; margin-top: 12px; color: #a5b4fc;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+/* License */
+.license-box {
+  max-width: 720px; margin: 0 auto;
+  background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(139,92,246,.1));
+  padding: 30px 34px; border-radius: 14px;
+  border: 1px solid rgba(139,92,246,.3);
+}
+.license-box h3 { font-size: 20px; margin-bottom: 16px; }
+.license-row { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.license-row:last-child { border: none; }
+.license-row strong { color: #a5b4fc; }
+.license-row .yes { color: #4ade80; }
+.license-row .no { color: #f87171; }
+
+/* Footer */
+footer {
+  padding: 50px 20px 30px; text-align: center;
+  border-top: 1px solid var(--border); color: var(--muted);
+  font-size: 13px;
+}
+footer a { color: var(--primary); }
+footer .foot-links { margin-bottom: 16px; }
+footer .foot-links a { margin: 0 12px; }
+
+/* Fade in */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+section > * { animation: fadeUp .6s ease-out both; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="brand">🛠 QCKit</div>
+    <div class="nav-links">
+      <a href="#features">特性</a>
+      <a href="#tools">工具</a>
+      <a href="#quickstart">快速开始</a>
+      <a href="#license">授权</a>
+      <a href="https://github.com/yidingwanglnsy-boop/qckit" target="_blank" class="nav-cta">⭐ GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────── -->
+<div class="hero">
+  <div class="container">
+    <div class="badges">
+      <span class="badge">✨ AI Powered</span>
+      <span class="badge">🏭 Made for Manufacturing</span>
+      <span class="badge">📖 Open Source · PolyForm NC</span>
+    </div>
+    <h1>让 QC 手法<br /><span class="accent">从「填 Excel」升级为「AI 自动出图 + 出报告」</span></h1>
+    <p>
+      QCKit 是一款专为制造业 QCC 圈员打造的<b>开源</b>质量工具箱。<br />
+      输入几个节点 · AI 自动分析 · 可交互图表 · <b>一键 PPT/Excel 导出</b>（原生形状可编辑）
+    </p>
+    <div class="cta">
+      <a href="https://github.com/yidingwanglnsy-boop/qckit" target="_blank" class="btn btn-primary">
+        🚀 前往 GitHub 试用
+      </a>
+      <a href="#quickstart" class="btn btn-ghost">
+        📖 快速开始
+      </a>
+    </div>
+
+    <div class="hero-shot">
+      <div class="shot-content">
+        <div class="demo-emoji">🐟 📊 🔗 🎯 📋 🔍 🕸 🧭</div>
+        <div style="color:#c7d2fe;font-weight:600;font-size:16px;margin-bottom:8px;">
+          8 大 QC 工具 · 全部 AI 增强 · 全部 PPTX 原生导出
+        </div>
+        <div>QCC 思路生成器 · 关联图 · 亲和图 · 鱼骨图 · 柏拉图 · 雷达图 · 5W2H · 根因确认</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Pain vs Cure ────────────── -->
+<section id="why" style="background: #131c2f;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Why QCKit</div>
+      <div class="section-title">告别传统 QC 工具的三大痛点</div>
+    </div>
+    <div class="pain-cure">
+      <div class="pc-card pain">
+        <h3>😩 传统方式</h3>
+        <ul>
+          <li>每次 QCC 都在填一样的 Excel 空白格子</li>
+          <li>关联图、鱼骨图要手工在 Visio 里连线</li>
+          <li>汇报要 PPT，只能截 Excel 图片</li>
+          <li>老板问「为啥选这几条要因」答不上来</li>
+          <li>企业品牌颜色手工调，导出物风格不统一</li>
+        </ul>
+      </div>
+      <div class="pc-card cure">
+        <h3>🚀 用 QCKit 之后</h3>
+        <ul>
+          <li>输入课题 → AI 分析末端要因、给出推理</li>
+          <li>Cytoscape/SVG 交互图，鼠标拖拽即调</li>
+          <li>PPTX 导出 = 原生形状，PPT 里继续编辑</li>
+          <li>每条判定都附 LLM 推理依据，可追溯</li>
+          <li>品牌主题一次设置，全站导出自动应用</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ────────────────── -->
+<section id="features">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Features</div>
+      <div class="section-title">核心特性</div>
+      <div class="section-sub">为质量工程师量身打造，不是给程序员的又一个 SaaS 玩具</div>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-emoji">🧠</div>
+        <h3>LLM 深度增强</h3>
+        <p>兼容 OpenAI 协议，可接阿里百炼、火山引擎、DeepSeek、Kimi、本地 vLLM，AI 自动分析 + 手工可编辑</p>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">📊</div>
+        <h3>PPTX 原生导出</h3>
+        <p>不是截图！鱼骨、关联图都是 PPT 原生形状，可以在 PowerPoint 里点选每根骨、每段文字继续编辑</p>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🎨</div>
+        <h3>品牌主题一等公民</h3>
+        <p>画布/HEX/RGB 三通道调色，公司 Logo + 中英字体 → 自动同步到所有工具的 PPT/Excel 导出</p>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🧭</div>
+        <h3>面向 QCC 圈员</h3>
+        <p>QCC 思路生成器带你走完选题 → 根因 → 对策 → 效果 → 总结五阶段，每阶段推荐质量工具跳转</p>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🏠</div>
+        <h3>本地部署 · 数据不出厂</h3>
+        <p>Docker Compose 一键起，可对接局域网内部 LLM。所有配置在网页里点点填好，无需改代码</p>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🔌</div>
+        <h3>易扩展</h3>
+        <p>新增一个 QC 工具 = 一个 Python 目录 + 一条路由 + 一个 Vue 页面。三步搞定</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Tools ───────────────────── -->
+<section id="tools" style="background: #131c2f;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Tools</div>
+      <div class="section-title">内置 8 大质量工具</div>
+      <div class="section-sub">全部 AI 增强 · 全部支持手工编辑 · 全部一键 PPTX/XLSX 导出</div>
+    </div>
+    <div class="tools-grid">
+      <div class="tool-card">
+        <span class="tool-tag">入门</span>
+        <div class="tool-emoji">🧭</div>
+        <div class="tool-name">QCC 思路生成器</div>
+        <div class="tool-desc">问题解决型五阶段路线图 + 推荐工具跳转</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">新QC</span>
+        <div class="tool-emoji">🔗</div>
+        <div class="tool-name">关联图 Relations</div>
+        <div class="tool-desc">LLM 分类节点角色 + 画因果边</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">新QC</span>
+        <div class="tool-emoji">🎯</div>
+        <div class="tool-name">亲和图 KJ</div>
+        <div class="tool-desc">发散想法自动归类分组</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">老QC</span>
+        <div class="tool-emoji">🐟</div>
+        <div class="tool-name">鱼骨图 4M</div>
+        <div class="tool-desc">4M 大骨 + 中骨末端 + 层级可调</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">老QC</span>
+        <div class="tool-emoji">📊</div>
+        <div class="tool-name">柏拉图 Pareto</div>
+        <div class="tool-desc">80/20 关键少数问题定位</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">通用</span>
+        <div class="tool-emoji">🕸</div>
+        <div class="tool-name">雷达图 Radar</div>
+        <div class="tool-desc">多维评估打分对比</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">通用</span>
+        <div class="tool-emoji">📋</div>
+        <div class="tool-name">5W2H</div>
+        <div class="tool-desc">计划展开 + 中英对齐表头</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-tag">通用</span>
+        <div class="tool-emoji">🔍</div>
+        <div class="tool-name">根因确认 RCA</div>
+        <div class="tool-desc">5-Why 逐层推理确认</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Providers ───────────────── -->
+<section id="providers">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">AI Providers</div>
+      <div class="section-title">支持全球主流大模型平台</div>
+      <div class="section-sub">Web 界面内置手把手接入向导，3 步搞定，无需查文档</div>
+    </div>
+    <div class="providers">
+      <div class="prov"><div class="prov-emoji">☁️</div><div class="prov-name">阿里百炼 (Qwen)</div><div class="prov-desc">国内首选</div></div>
+      <div class="prov"><div class="prov-emoji">🌋</div><div class="prov-name">火山引擎 (豆包)</div><div class="prov-desc">字节全家桶</div></div>
+      <div class="prov"><div class="prov-emoji">🐋</div><div class="prov-name">DeepSeek</div><div class="prov-desc">性价比之选</div></div>
+      <div class="prov"><div class="prov-emoji">🌙</div><div class="prov-name">Kimi (Moonshot)</div><div class="prov-desc">128K 长文本</div></div>
+      <div class="prov"><div class="prov-emoji">🌐</div><div class="prov-name">OpenAI (GPT)</div><div class="prov-desc">国际大厂</div></div>
+      <div class="prov"><div class="prov-emoji">💻</div><div class="prov-name">本地 vLLM / Ollama</div><div class="prov-desc">私有部署</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Quick Start ─────────────── -->
+<section id="quickstart" style="background: #131c2f;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Quick Start</div>
+      <div class="section-title">3 步跑起来</div>
+      <div class="section-sub">Docker / 本地 Python / 一体化打包 · 任选</div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Clone 仓库</h3>
+        <p>从 GitHub 拉下代码到本地</p>
+        <code>git clone https://github.com/yidingwanglnsy-boop/qckit.git
+cd qckit</code>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>启动服务</h3>
+        <p>用 Docker Compose 一键起</p>
+        <code>docker compose up -d</code>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>接入 AI</h3>
+        <p>浏览器打开 <code style="display:inline;padding:2px 8px;">http://localhost:8000</code>，在「大模型 API」向导里 3 步配好 Key</p>
+        <code>推荐先用阿里百炼
+新用户额度多、无需信用卡</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── License ─────────────────── -->
+<section id="license">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">License</div>
+      <div class="section-title">双许可模式</div>
+      <div class="section-sub">个人 / 学习 / 非营利免费用；商业用途需另行授权</div>
+    </div>
+    <div class="license-box">
+      <h3>📄 PolyForm Noncommercial 1.0.0 + 商业授权</h3>
+      <div class="license-row">
+        <strong>✅ 免费使用</strong>：个人学习、学术研究、非营利机构内部使用、开源集成、公开演示、评估试用
+      </div>
+      <div class="license-row">
+        <strong>💼 需商业授权</strong>：对外销售、SaaS、企业生产系统、付费咨询交付、闭源分发
+      </div>
+      <div class="license-row" style="text-align:center;padding-top:20px;">
+        <a href="https://github.com/yidingwanglnsy-boop/qckit/issues" target="_blank" class="btn btn-primary" style="font-size:14px;padding:10px 22px;">
+          💬 商业授权咨询 → GitHub Issue
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ──────────────────── -->
+<footer>
+  <div class="foot-links">
+    <a href="https://github.com/yidingwanglnsy-boop/qckit" target="_blank">GitHub</a>
+    <a href="https://github.com/yidingwanglnsy-boop/qckit/issues" target="_blank">Issues</a>
+    <a href="https://github.com/yidingwanglnsy-boop/qckit/blob/main/LICENSE" target="_blank">License</a>
+  </div>
+  <div>
+    Copyright © 2026 王一定 (Yiding Wang) · Built with ❤️ for QC engineers
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:#64748b;">
+    QCKit is dual-licensed under PolyForm Noncommercial 1.0.0 · Commercial license required for commercial use
+  </div>
+</footer>
+
+</body>
+</html>
