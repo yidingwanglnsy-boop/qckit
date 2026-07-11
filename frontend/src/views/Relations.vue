@@ -16,6 +16,9 @@
         <el-button size="default" :disabled="!result" @click="exportJson">
           <el-icon><Download /></el-icon>&nbsp;JSON
         </el-button>
+        <el-button size="default" :disabled="!result" :loading="pptxLoading" @click="exportPptx">
+          <el-icon><Document /></el-icon>&nbsp;PPTX
+        </el-button>
         <el-button size="default" type="primary" :disabled="!result" @click="exportPng">
           <el-icon><Picture /></el-icon>&nbsp;导出 PNG
         </el-button>
@@ -172,7 +175,7 @@ import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import cytoscape from 'cytoscape'
 import fcose from 'cytoscape-fcose'
-import { analyzeRelations } from '../api'
+import { analyzeRelations, downloadPptx } from '../api'
 
 cytoscape.use(fcose)
 
@@ -344,6 +347,18 @@ function exportJson() {
   const blob = new Blob([JSON.stringify(result.value, null, 2)], {type:'application/json'})
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob); a.download = `关联图_${topic.value}.json`; a.click()
+}
+
+const pptxLoading = ref(false)
+async function exportPptx() {
+  if (!result.value) return
+  pptxLoading.value = true
+  try {
+    await downloadPptx('relations', result.value, `关联图_${topic.value}.pptx`)
+    ElMessage.success('PPTX 已下载')
+  } catch (e) {
+    ElMessage.error('导出失败: ' + (e.response?.data?.detail || e.message))
+  } finally { pptxLoading.value = false }
 }
 
 onBeforeUnmount(() => {
