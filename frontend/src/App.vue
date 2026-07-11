@@ -28,6 +28,14 @@
             <el-icon><TrendCharts /></el-icon>柏拉图
           </el-menu-item>
         </el-sub-menu>
+        <el-sub-menu index="general">
+          <template #title>
+            <el-icon><Aim /></el-icon><span>通用工具</span>
+          </template>
+          <el-menu-item index="/tools/radar">
+            <el-icon><Aim /></el-icon>雷达图
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon><span>LLM 配置</span>
         </el-menu-item>

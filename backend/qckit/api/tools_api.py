@@ -4,9 +4,11 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ..core.registry import all_tools
-from ..core.pptx_export import build_affinity_pptx, build_pareto_pptx, build_relations_pptx
+from ..core.pptx_export import (build_affinity_pptx, build_pareto_pptx,
+                                build_radar_pptx, build_relations_pptx)
 from ..tools.affinity import AffinityRequest, analyze as affinity_analyze
 from ..tools.pareto import ParetoRequest, analyze as pareto_analyze
+from ..tools.radar import RadarRequest, analyze as radar_analyze
 from ..tools.relations import RelationsRequest, analyze as relations_analyze
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
@@ -67,3 +69,15 @@ def pareto_export_pptx(payload: dict):
     buf = build_pareto_pptx(payload)
     topic = payload.get("topic", "柏拉图")
     return _pptx_response(buf, f"柏拉图_{topic}.pptx")
+
+
+@router.post("/radar/analyze")
+def radar_endpoint(req: RadarRequest):
+    return _run(radar_analyze, req)
+
+
+@router.post("/radar/export/pptx")
+def radar_export_pptx(payload: dict):
+    buf = build_radar_pptx(payload)
+    topic = payload.get("topic", "雷达图")
+    return _pptx_response(buf, f"雷达图_{topic}.pptx")

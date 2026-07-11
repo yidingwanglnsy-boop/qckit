@@ -498,3 +498,147 @@ def build_pareto_pptx(payload: dict[str, Any]) -> io.BytesIO:
 
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf
+
+
+
+# ─────────────────────────────────────────────────────────
+# 雷达图 (Radar) - 原生 RADAR chart + 洞察页
+# ─────────────────────────────────────────────────────────
+def build_radar_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    topic = payload.get("topic", "雷达图")
+    dims = payload.get("dimensions", [])
+    entities = payload.get("entities", [])
+    max_s = float(payload.get("max_score", 10))
+    weak_th = float(payload.get("weak_threshold", 0.6))
+    best = payload.get("best_entity", "")
+    leaders = payload.get("dim_leaders", {}) or {}
+    insights = payload.get("insights", "")
+    recs = payload.get("recommendations", [])
+
+    prs = _new_deck(f"雷达图 · {topic}",
+                    f"QCKit · Radar · 维度 {len(dims)} · 对象 {len(entities)} · 满分 {max_s:g}")
+    slide = prs.slides[0]
+    if not dims or not entities:
+        buf = io.BytesIO(); prs.save(buf); buf.seek(0); return buf
+
+    # 原生雷达图
+    cd = CategoryChartData()
+    cd.categories = dims
+    for e in entities:
+        cd.add_series(e["name"], e["scores"])
+
+    chart_x, chart_y = Inches(0.4), Inches(1.0)
+    chart_w, chart_h = Inches(8.5), Inches(6.0)
+    graphic = slide.shapes.add_chart(XL_CHART_TYPE.RADAR,
+                                     chart_x, chart_y, chart_w, chart_h, cd)
+    chart = graphic.chart
+    chart.has_title = True
+    chart.chart_title.text_frame.text = f"{topic}"
+    for p in chart.chart_title.text_frame.paragraphs:
+        for r in p.runs:
+            r.font.name = FONT; r.font.size = Pt(14); r.font.bold = True
+    chart.has_legend = True
+    chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+    chart.legend.include_in_layout = False
+    chart.legend.font.name = FONT; chart.legend.font.size = Pt(10)
+
+    # 右侧: 冠军卡 + 短板汇总
+    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                   Inches(9.05), Inches(1.0),
+                                   Inches(3.95), Inches(2.6))
+    card.fill.solid(); card.fill.fore_color.rgb = _rgb("ECFDF5")
+    card.line.color.rgb = _rgb("059669"); card.line.width = Pt(2)
+    tf = card.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0.2)
+    tf.margin_top = Inches(0.2)
+    _set_text(tf, "🏆 综合最强", size=13, bold=True, color="065F46", align=PP_ALIGN.LEFT)
+    p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT
+    r = p.add_run(); r.text = best
+    r.font.name = FONT; r.font.size = Pt(20); r.font.bold = True
+    r.font.color.rgb = _rgb("047857")
+    if leaders:
+        p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.LEFT
+        p2.space_before = Pt(8)
+        r2 = p2.add_run()
+        r2.text = "各维度冠军:"
+        r2.font.name = FONT; r2.font.size = Pt(11); r2.font.bold = True
+        r2.font.color.rgb = _rgb("065F46")
+        for dim, who in leaders.items():
+            p3 = tf.add_paragraph(); p3.alignment = PP_ALIGN.LEFT
+            r3 = p3.add_run()
+            r3.text = f"• {dim}: {who}"
+            r3.font.name = FONT; r3.font.size = Pt(10)
+            r3.font.color.rgb = _rgb("064E3B")
+
+    # 短板汇总卡
+    weak_card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                        Inches(9.05), Inches(3.75),
+                                        Inches(3.95), Inches(3.25))
+    weak_card.fill.solid(); weak_card.fill.fore_color.rgb = _rgb("FEF2F2")
+    weak_card.line.color.rgb = _rgb("DC2626"); weak_card.line.width = Pt(2)
+    tf2 = weak_card.text_frame
+    tf2.word_wrap = True
+    tf2.margin_left = tf2.margin_right = Inches(0.2)
+    tf2.margin_top = Inches(0.2)
+    _set_text(tf2, f"⚠️ 短板 (< {weak_th*100:.0f}% 满分)",
+              size=13, bold=True, color="991B1B", align=PP_ALIGN.LEFT)
+    for e in entities:
+        if not e.get("weak_dims"): continue
+        p = tf2.add_paragraph(); p.alignment = PP_ALIGN.LEFT
+        p.space_before = Pt(6)
+        r = p.add_run(); r.text = f"• {e['name']} (均值 {e['average']})"
+        r.font.name = FONT; r.font.size = Pt(11); r.font.bold = True
+        r.font.color.rgb = _rgb("7F1D1D")
+        p2 = tf2.add_paragraph(); p2.alignment = PP_ALIGN.LEFT
+        r2 = p2.add_run(); r2.text = "   " + ", ".join(e["weak_dims"])
+        r2.font.name = FONT; r2.font.size = Pt(10)
+        r2.font.color.rgb = _rgb("991B1B")
+
+    # 第二页: 洞察 + 建议
+    if insights or recs:
+        slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+        hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                      Inches(0), Inches(0),
+                                      prs.slide_width, Inches(0.6))
+        hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("0F172A")
+        hdr.line.fill.background()
+        _set_text(hdr.text_frame, f"分析结论 · {topic}", size=18, bold=True,
+                  color="FFFFFF", align=PP_ALIGN.LEFT)
+        hdr.text_frame.margin_left = Inches(0.3)
+
+        left = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                       Inches(0.4), Inches(1.0),
+                                       Inches(6.2), Inches(5.8))
+        left.fill.solid(); left.fill.fore_color.rgb = _rgb("F8FAFC")
+        left.line.color.rgb = _rgb("0284C7"); left.line.width = Pt(2)
+        tf = left.text_frame
+        tf.word_wrap = True
+        tf.margin_left = tf.margin_right = Inches(0.25)
+        tf.margin_top = Inches(0.25)
+        _set_text(tf, "💡 对比洞察", size=15, bold=True, color="075985",
+                  align=PP_ALIGN.LEFT)
+        p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.LEFT
+        r = p2.add_run(); r.text = insights
+        r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("334155")
+
+        right = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                        Inches(6.8), Inches(1.0),
+                                        Inches(6.1), Inches(5.8))
+        right.fill.solid(); right.fill.fore_color.rgb = _rgb("FFFFFF")
+        right.line.color.rgb = _rgb("E5E7EB")
+        tf2 = right.text_frame
+        tf2.word_wrap = True
+        tf2.margin_left = tf2.margin_right = Inches(0.25)
+        tf2.margin_top = Inches(0.25)
+        _set_text(tf2, "🎯 改善建议 (针对短板)",
+                  size=14, bold=True, color="065F46", align=PP_ALIGN.LEFT)
+        for i, rec in enumerate(recs, 1):
+            pr = tf2.add_paragraph()
+            pr.alignment = PP_ALIGN.LEFT; pr.space_before = Pt(8)
+            run = pr.add_run(); run.text = f"{i}. {rec}"
+            run.font.name = FONT; run.font.size = Pt(12)
+            run.font.color.rgb = _rgb("1F2937")
+
+    buf = io.BytesIO(); prs.save(buf); buf.seek(0)
+    return buf

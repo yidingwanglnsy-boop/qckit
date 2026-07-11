@@ -8,6 +8,7 @@ export const saveConfig   = (llm) => api.post('/config', llm).then(r => r.data)
 export const analyzeRelations = (p) => api.post('/tools/relations/analyze', p).then(r => r.data)
 export const analyzeAffinity  = (p) => api.post('/tools/affinity/analyze',  p).then(r => r.data)
 export const analyzePareto    = (p) => api.post('/tools/pareto/analyze',    p).then(r => r.data)
+export const analyzeRadar     = (p) => api.post('/tools/radar/analyze',     p).then(r => r.data)
 
 // 通用: 下载 PPTX
 export async function downloadPptx(tool, payload, filename) {
