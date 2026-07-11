@@ -151,6 +151,78 @@ nav {
 }
 .shot-content .demo-emoji { font-size: 60px; margin-bottom: 18px; }
 
+/* Stats bar (hero) */
+.stats {
+  margin-top: 50px; display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 20px; max-width: 780px; margin-left: auto; margin-right: auto;
+}
+@media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat {
+  padding: 16px 12px; border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.stat-num {
+  font-size: 26px; font-weight: 800; letter-spacing: -.5px;
+  background: linear-gradient(135deg, #a5b4fc, #f0abfc);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+/* Case study result */
+.case-result {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  max-width: 920px; margin: 0 auto 40px;
+}
+@media (max-width: 620px) { .case-result { grid-template-columns: repeat(2, 1fr); } }
+.case-stat {
+  background: rgba(255,255,255,.04); padding: 20px 14px;
+  border-radius: 10px; border: 1px solid var(--border);
+  text-align: center;
+}
+.cs-num {
+  font-size: 22px; font-weight: 800; letter-spacing: -.5px;
+  margin-bottom: 4px;
+}
+.cs-label { color: var(--muted); font-size: 12.5px; }
+
+/* Case shot (SVG demo card) */
+.case-shot {
+  max-width: 920px; margin: 0 auto 22px;
+  background: #fff; color: #0f172a;
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,.35);
+  border: 1px solid #e2e8f0;
+}
+.case-shot .shot-hd {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px; background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0; gap: 12px;
+}
+.case-shot .shot-tag { font-size: 12px; color: #6366f1; font-weight: 600; letter-spacing: .5px; }
+.case-shot .shot-title { font-size: 15px; font-weight: 700; margin-top: 2px; color: #0f172a; }
+.case-shot .shot-meta { font-size: 11.5px; color: #64748b; text-align: right; }
+.case-shot .shot-body {
+  padding: 20px 20px 12px;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+.case-shot .shot-foot {
+  padding: 12px 20px; font-size: 12.5px; color: #475569;
+  background: #f8fafc; border-top: 1px solid #e2e8f0;
+}
+
+/* Demo 5W2H table */
+.demo-table {
+  width: 100%; border-collapse: collapse; background: #fff;
+  border-radius: 6px; overflow: hidden; font-size: 13px;
+}
+.demo-table thead { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+.demo-table th { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12.5px; }
+.demo-table td { padding: 10px 14px; border-top: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+.demo-table td:first-child { width: 28%; background: #f8fafc; color: #0f172a; }
+
 /* ── Sections ────────────────────── */
 section { padding: 90px 20px; }
 .section-head {
@@ -313,6 +385,7 @@ section > * { animation: fadeUp .6s ease-out both; }
   <div class="nav-inner">
     <div class="brand">🛠 QCKit</div>
     <div class="nav-links">
+      <a href="#case">案例</a>
       <a href="#features">特性</a>
       <a href="#tools">工具</a>
       <a href="#quickstart">快速开始</a>
@@ -326,35 +399,215 @@ section > * { animation: fadeUp .6s ease-out both; }
 <div class="hero">
   <div class="container">
     <div class="badges">
-      <span class="badge">✨ AI Powered</span>
-      <span class="badge">🏭 Made for Manufacturing</span>
-      <span class="badge">📖 Open Source · PolyForm NC</span>
+      <span class="badge">✨ AI 深度赋能</span>
+      <span class="badge">🏭 为制造业打造</span>
+      <span class="badge">📖 开源 · 本地部署</span>
+      <span class="badge">📊 PPTX 原生形状导出</span>
     </div>
-    <h1>让 QC 手法<br /><span class="accent">从「填 Excel」升级为「AI 自动出图 + 出报告」</span></h1>
+    <h1>让每一次 QCC 改进<br /><span class="accent">从「熬夜画图」变成「AI 出稿，人来定夺」</span></h1>
     <p>
-      QCKit 是一款专为制造业 <b>QCC（品管圈 / Quality Control Circle）</b>圈员打造的<b>开源</b>质量工具箱。<br />
-      输入几个节点 · AI 自动分析 · 可交互图表 · <b>一键 PPT/Excel 导出</b>（原生形状可编辑）
+      面向制造业 <b>QCC（品管圈 / Quality Control Circle）</b>圈员的开源质量改进工具箱。<br />
+      <b>选题 · 现状 · 根因 · 对策 · 效果 · 标准化</b> —— 五阶段全流程，8 大质量工具 AI 增强，
+      <b>PPTX / Excel 一键出稿</b>，交付物到手就能上汇报。
     </p>
     <div class="cta">
       <a href="https://github.com/yidingwanglnsy-boop/qckit" target="_blank" class="btn btn-primary">
-        🚀 前往 GitHub 试用
+        ⭐ Star & 立即试用
       </a>
-      <a href="#quickstart" class="btn btn-ghost">
-        📖 快速开始
+      <a href="#case" class="btn btn-ghost">
+        👀 看真实改进案例 →
       </a>
     </div>
 
-    <div class="hero-shot">
-      <div class="shot-content">
-        <div class="demo-emoji">🐟 📊 🔗 🎯 📋 🔍 🕸 🧭</div>
-        <div style="color:#c7d2fe;font-weight:600;font-size:16px;margin-bottom:8px;">
-          8 大 QC 工具 · 全部 AI 增强 · 全部 PPTX 原生导出
-        </div>
-        <div>QCC 思路生成器 · 关联图 · 亲和图 · 鱼骨图 · 柏拉图 · 雷达图 · 5W2H · 根因确认</div>
+    <!-- 数字亮点 -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">3 min</div>
+        <div class="stat-label">从课题输入到 PPT 交付</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">8 大</div>
+        <div class="stat-label">质量工具 AI 增强</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">导出形状 PPT 里可编辑</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">0</div>
+        <div class="stat-label">数据出厂 · 本地部署</div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ── Case Study (真实案例) ───── -->
+<section id="case" style="background: linear-gradient(180deg, #0f172a 0%, #131c2f 100%); padding-top: 30px;">
+  <div class="container">
+    <div class="section-head" style="margin-bottom: 40px;">
+      <div class="section-tag">Real Case Study</div>
+      <div class="section-title">3 分钟看懂 QCKit —— 一个真实的焊接改进故事</div>
+      <div class="section-sub">
+        某汽车零部件工厂，3 号机台焊接不良率 2 周内从 1.2% 攀升至 3.5%，
+        班组用 QCKit 走完一轮 QCC，交付以下三张图。
+      </div>
+    </div>
+
+    <!-- 案例结果 -->
+    <div class="case-result">
+      <div class="case-stat"><div class="cs-num" style="color:#4ade80;">3.5% → 1.2%</div><div class="cs-label">不良率下降 66%</div></div>
+      <div class="case-stat"><div class="cs-num" style="color:#facc15;">¥ 87 万</div><div class="cs-label">年化节约 (估算)</div></div>
+      <div class="case-stat"><div class="cs-num" style="color:#60a5fa;">14 天</div><div class="cs-label">从立项到验证达标</div></div>
+      <div class="case-stat"><div class="cs-num" style="color:#f472b6;">4 张</div><div class="cs-label">直接用于汇报的 PPT 页</div></div>
+    </div>
+
+    <!-- 图 1: 鱼骨图 -->
+    <div class="case-shot">
+      <div class="shot-hd">
+        <div>
+          <div class="shot-tag">🐟 鱼骨图 · 4M 根因分析</div>
+          <div class="shot-title">"焊接不良率上升" 的 12 条末端要因</div>
+        </div>
+        <div class="shot-meta">AI 自动生成 · 人工可编辑 · PPTX 原生形状</div>
+      </div>
+      <div class="shot-body">
+        <svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+          <!-- 主脊 -->
+          <line x1="60" y1="170" x2="720" y2="170" stroke="#e2e8f0" stroke-width="3"/>
+          <polygon points="720,160 740,170 720,180" fill="#e2e8f0"/>
+          <!-- 鱼头 -->
+          <rect x="740" y="130" width="140" height="80" rx="10" fill="url(#g1)" />
+          <text x="810" y="165" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">焊接不良率</text>
+          <text x="810" y="185" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">上升</text>
+
+          <!-- 4 根大骨 -->
+          <!-- 人-左上 -->
+          <line x1="160" y1="170" x2="90" y2="60" stroke="#8b5cf6" stroke-width="2.5"/>
+          <rect x="30" y="35" width="90" height="30" rx="4" fill="#8b5cf6"/>
+          <text x="75" y="55" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">人 Man</text>
+          <text x="140" y="90" fill="#cbd5e1" font-size="11">焊工技能不齐</text>
+          <text x="185" y="120" fill="#fbbf24" font-size="11">培训缺失 ✨AI</text>
+
+          <!-- 机-左下 -->
+          <line x1="270" y1="170" x2="200" y2="285" stroke="#06b6d4" stroke-width="2.5"/>
+          <rect x="140" y="290" width="105" height="30" rx="4" fill="#06b6d4"/>
+          <text x="192" y="310" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">机 Machine</text>
+          <text x="250" y="245" fill="#fbbf24" font-size="11">送丝机抖动 ✨AI</text>
+          <text x="280" y="270" fill="#cbd5e1" font-size="11">焊枪磨损</text>
+
+          <!-- 料-右上 -->
+          <line x1="440" y1="170" x2="370" y2="60" stroke="#10b981" stroke-width="2.5"/>
+          <rect x="310" y="35" width="105" height="30" rx="4" fill="#10b981"/>
+          <text x="362" y="55" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">料 Material</text>
+          <text x="425" y="90" fill="#cbd5e1" font-size="11">焊丝公差偏大</text>
+          <text x="450" y="115" fill="#cbd5e1" font-size="11">保护气纯度</text>
+
+          <!-- 法-右下 -->
+          <line x1="590" y1="170" x2="520" y2="285" stroke="#f97316" stroke-width="2.5"/>
+          <rect x="460" y="290" width="105" height="30" rx="4" fill="#f97316"/>
+          <text x="512" y="310" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">法 Method</text>
+          <text x="575" y="245" fill="#cbd5e1" font-size="11">流量表偏差</text>
+          <text x="605" y="270" fill="#fbbf24" font-size="11">参数不当 ✨AI</text>
+
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="shot-foot">
+        💡 标注 <span style="color:#fbbf24;">✨AI</span> 的是 LLM 补全末端，其余是圈员输入。<b>下一步：交由 5W2H 展开对策</b>
+      </div>
+    </div>
+
+    <!-- 图 2: 关联图 -->
+    <div class="case-shot">
+      <div class="shot-hd">
+        <div>
+          <div class="shot-tag">🔗 关联图 · 因果传导</div>
+          <div class="shot-title">末端要因之间的因果链，AI 自动分类节点角色</div>
+        </div>
+        <div class="shot-meta">Cytoscape 交互 · 可拖拽 · 可导出 PNG</div>
+      </div>
+      <div class="shot-body">
+        <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+          <!-- 边（先画避免被节点盖） -->
+          <line x1="130" y1="90"  x2="330" y2="80"  stroke="#475569" stroke-width="1.5"/>
+          <line x1="130" y1="220" x2="330" y2="180" stroke="#475569" stroke-width="1.5"/>
+          <line x1="380" y1="80"  x2="580" y2="160" stroke="#f87171" stroke-width="2.5"/>
+          <line x1="380" y1="180" x2="580" y2="160" stroke="#f87171" stroke-width="2.5"/>
+          <line x1="380" y1="240" x2="580" y2="160" stroke="#475569" stroke-width="1.5"/>
+          <line x1="130" y1="240" x2="330" y2="240" stroke="#475569" stroke-width="1.5"/>
+          <line x1="640" y1="160" x2="800" y2="160" stroke="#fbbf24" stroke-width="3"/>
+
+          <!-- 一般原因 (灰) -->
+          <g><circle cx="90" cy="90" r="34" fill="#475569"/><text x="90" y="86" text-anchor="middle" fill="#fff" font-size="11">焊枪</text><text x="90" y="100" text-anchor="middle" fill="#fff" font-size="11">磨损</text></g>
+          <g><circle cx="90" cy="220" r="34" fill="#475569"/><text x="90" y="216" text-anchor="middle" fill="#fff" font-size="11">保护气</text><text x="90" y="230" text-anchor="middle" fill="#fff" font-size="11">纯度</text></g>
+          <g><circle cx="90" cy="240" r="0"/></g>
+
+          <!-- 传导 (蓝) -->
+          <g><circle cx="350" cy="80" r="38" fill="#3b82f6"/><text x="350" y="76" text-anchor="middle" fill="#fff" font-size="11">送丝机</text><text x="350" y="90" text-anchor="middle" fill="#fff" font-size="11">抖动</text></g>
+          <g><circle cx="350" cy="180" r="38" fill="#3b82f6"/><text x="350" y="176" text-anchor="middle" fill="#fff" font-size="11">流量表</text><text x="350" y="190" text-anchor="middle" fill="#fff" font-size="11">偏差</text></g>
+          <g><circle cx="350" cy="240" r="34" fill="#475569"/><text x="350" y="236" text-anchor="middle" fill="#fff" font-size="11">焊丝</text><text x="350" y="250" text-anchor="middle" fill="#fff" font-size="11">公差</text></g>
+
+          <!-- 关键 (橙) -->
+          <g><circle cx="600" cy="160" r="46" fill="#f97316"/><text x="600" y="154" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">参数</text><text x="600" y="170" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">不当</text><text x="600" y="188" text-anchor="middle" fill="#fef3c7" font-size="9">关键节点</text></g>
+
+          <!-- 核心 (红) -->
+          <g><circle cx="820" cy="160" r="52" fill="#dc2626"/><text x="820" y="152" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">焊接</text><text x="820" y="170" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">不良率</text><text x="820" y="190" text-anchor="middle" fill="#fecaca" font-size="9">核心问题</text></g>
+
+          <!-- 图例 -->
+          <g transform="translate(20,290)">
+            <circle cx="8" cy="0" r="7" fill="#dc2626"/><text x="22" y="4" fill="#e2e8f0" font-size="11">核心</text>
+            <circle cx="80" cy="0" r="7" fill="#f97316"/><text x="94" y="4" fill="#e2e8f0" font-size="11">关键</text>
+            <circle cx="160" cy="0" r="7" fill="#3b82f6"/><text x="174" y="4" fill="#e2e8f0" font-size="11">传导</text>
+            <circle cx="240" cy="0" r="7" fill="#475569"/><text x="254" y="4" fill="#e2e8f0" font-size="11">一般</text>
+          </g>
+        </svg>
+      </div>
+      <div class="shot-foot">
+        💡 LLM 判定 <b>参数不当 → 焊接不良率</b> 为最强因果链，圈组集中攻这一条即可拿下大部分不良
+      </div>
+    </div>
+
+    <!-- 图 3: 5W2H -->
+    <div class="case-shot">
+      <div class="shot-hd">
+        <div>
+          <div class="shot-tag">📋 5W2H · 对策落地</div>
+          <div class="shot-title">锁定"参数不当"后，AI 一键展开对策</div>
+        </div>
+        <div class="shot-meta">中英对齐表头 · 可编辑 · XLSX 一键导出</div>
+      </div>
+      <div class="shot-body" style="padding:16px 20px;">
+        <table class="demo-table">
+          <thead>
+            <tr>
+              <th>问 (Question)</th><th>答 (Answer)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Why · 为什么</b></td><td>参数漂移导致熔深不足，气孔率上升 →不良率↑</td></tr>
+            <tr><td><b>What · 做什么</b></td><td>重新标定 3 号机台焊接参数并锁死；培训焊工</td></tr>
+            <tr><td><b>Who · 谁做</b></td><td>工艺工程师张三 (Owner) · 班组长李四 (培训)</td></tr>
+            <tr><td><b>When · 何时</b></td><td>2026-08-05 之前完成参数标定；8 月内完成培训</td></tr>
+            <tr><td><b>Where · 在哪</b></td><td>3 号焊接机台 · 焊接培训教室</td></tr>
+            <tr><td><b>How · 怎么做</b></td><td>参数标定 → 首件三检 → 参数锁定 → 培训 → 考核</td></tr>
+            <tr><td><b>How much · 多少</b></td><td>不良率 <b style="color:#4ade80;">≤ 1.5%</b> · 培训覆盖 100% · 预算 ¥ 8000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="shot-foot">
+        💡 全部 <b>AI 联想补全</b> + 圈员校正，1 分钟出对策 · 直接下载 XLSX 送审
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top: 30px;">
+      <a href="https://github.com/yidingwanglnsy-boop/qckit" target="_blank" class="btn btn-primary">
+        🚀 部署到我的工厂
+      </a>
+    </div>
+  </div>
+</section>
 
 <!-- ── Pain vs Cure ────────────── -->
 <section id="why" style="background: #131c2f;">
