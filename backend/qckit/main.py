@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.brand_api import router as brand_router
 from .api.config_api import router as config_router
+from .api.projects_api import router as projects_router
 from .api.tools_api import router as tools_router
 from .tools import *  # noqa: F401,F403  触发工具注册
 
@@ -26,6 +27,7 @@ app.add_middleware(
 app.include_router(config_router)
 app.include_router(brand_router)
 app.include_router(tools_router)
+app.include_router(projects_router)
 
 
 @app.get("/api/health")

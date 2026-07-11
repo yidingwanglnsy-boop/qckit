@@ -14,6 +14,8 @@ import Mda from './views/Mda.vue'
 import Pdpc from './views/Pdpc.vue'
 import Arrow from './views/Arrow.vue'
 import History from './views/History.vue'
+import Projects from './views/Projects.vue'
+import ProjectDetail from './views/ProjectDetail.vue'
 import Brand from './views/Brand.vue'
 import Settings from './views/Settings.vue'
 
@@ -35,6 +37,8 @@ export default createRouter({
     { path: '/tools/pdpc',      component: Pdpc      },
     { path: '/tools/arrow',     component: Arrow     },
     { path: '/history',  component: History },
+    { path: '/projects',        component: Projects },
+    { path: '/projects/:id',    component: ProjectDetail },
     { path: '/brand',    component: Brand },
     { path: '/settings', component: Settings }
   ]

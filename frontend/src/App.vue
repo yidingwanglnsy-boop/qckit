@@ -12,6 +12,9 @@
         <el-menu-item index="/">
           <el-icon><HomeFilled /></el-icon><template #title>首页</template>
         </el-menu-item>
+        <el-menu-item index="/projects">
+          <el-icon><Files /></el-icon><template #title>我的项目</template>
+        </el-menu-item>
         <el-menu-item index="/tools/qcc-guide">
           <el-icon><Guide /></el-icon><template #title>QCC 思路生成器</template>
         </el-menu-item>

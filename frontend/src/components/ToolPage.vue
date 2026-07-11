@@ -75,6 +75,7 @@ import { downloadPptx } from '../api'
 import ToolkitBar from './ToolkitBar.vue'
 import NextStepBar from './NextStepBar.vue'
 import { useToolkit } from '../composables/useToolkit'
+import { tryAttachToProject } from '../composables/useAttach'
 
 const props = defineProps({
   toolKey: String,
@@ -123,6 +124,7 @@ async function doAnalyze () {
     result.value = await props.analyzeFn(props.form)
     toolkit.saveHistory(result.value)
     ElMessage.success('分析完成')
+    await tryAttachToProject(props.toolKey, props.form, result.value)
   } catch (e) {
     // 全局拦截器已弹提示
   } finally {

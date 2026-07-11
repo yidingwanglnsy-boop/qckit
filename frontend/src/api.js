@@ -105,3 +105,25 @@ export const downloadPptx = (tool, payload, filename) =>
   downloadFile(tool, 'pptx', payload, filename)
 export const downloadXlsx = (tool, payload, filename) =>
   downloadFile(tool, 'xlsx', payload, filename)
+
+// ────── QCC 项目容器 ──────
+export const listProjects   = ()   => api.get('/projects').then(r => r.data)
+export const getProject     = (id) => api.get(`/projects/${id}`).then(r => r.data)
+export const createProject  = (b)  => api.post('/projects', b).then(r => r.data)
+export const updateProject  = (id, b) => api.patch(`/projects/${id}`, b).then(r => r.data)
+export const deleteProject  = (id) => api.delete(`/projects/${id}`).then(r => r.data)
+export const projectsMeta   = ()   => api.get('/projects/meta').then(r => r.data)
+export const attachToProject = (id, body) =>
+  api.post(`/projects/${id}/attach`, body).then(r => r.data)
+export const detachFromProject = (id, stage, aid) =>
+  api.delete(`/projects/${id}/stages/${stage}/${aid}`).then(r => r.data)
+export async function downloadProjectPptx (id, filename = '项目报告.pptx') {
+  try {
+    const r = await api.get(`/projects/${id}/export/pptx`, { responseType: 'blob' })
+    const url = URL.createObjectURL(r.data)
+    const a = document.createElement('a')
+    a.href = url; a.download = filename; a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    ElMessage.success(`已导出 ${filename}`)
+  } catch (e) { console.error('[downloadProjectPptx]', e) }
+}
