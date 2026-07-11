@@ -77,6 +77,45 @@ def _new_deck(title: str, subtitle: str = "") -> Presentation:
 # ─────────────────────────────────────────────────────────
 # 关联图
 # ─────────────────────────────────────────────────────────
+def _relations_layout(nodes: list, edges: list) -> dict:
+    """三列分层布局: normal/conduct(左) → key(中) → core(右).
+    每列内部按度数降序、上下均匀分布, 避免重叠."""
+    # 度统计
+    indeg: dict[str, int] = {}
+    outdeg: dict[str, int] = {}
+    for n in nodes:
+        indeg[n["id"]] = 0; outdeg[n["id"]] = 0
+    for e in edges:
+        s, t = e.get("source"), e.get("target")
+        if s in outdeg: outdeg[s] += 1
+        if t in indeg: indeg[t] += 1
+
+    col_of = {"normal": 0, "conduct": 0, "key": 1, "core": 2}
+    cols: list[list[dict]] = [[], [], []]
+    for n in nodes:
+        cols[col_of.get(n.get("role", "normal"), 0)].append(n)
+    # 每列按总度降序 (高度数放中间视觉更平衡)
+    for c in cols:
+        c.sort(key=lambda x: -(indeg[x["id"]] + outdeg[x["id"]]))
+
+    # 三列 x 坐标 (16:9 slide, 剩余画面区高 1.0 - 7.2 英寸)
+    col_xs = [Inches(2.2), Inches(6.8), Inches(11.0)]
+    y_top, y_bot = Inches(1.4), Inches(6.9)
+    positions: dict[str, tuple] = {}
+    for ci, col in enumerate(cols):
+        n = len(col)
+        if n == 0: continue
+        # 单节点垂直居中; 多节点等距
+        if n == 1:
+            positions[col[0]["id"]] = (col_xs[ci], (y_top + y_bot) // 2)
+        else:
+            step = (y_bot - y_top) // (n - 1)
+            for i, node in enumerate(col):
+                positions[node["id"]] = (col_xs[ci], y_top + step * i)
+    return {"positions": positions, "indeg": indeg, "outdeg": outdeg,
+            "cols": cols, "col_xs": col_xs}
+
+
 def build_relations_pptx(payload: dict[str, Any]) -> io.BytesIO:
     topic = payload.get("topic", "关联图")
     nodes = payload.get("nodes", [])
@@ -84,84 +123,214 @@ def build_relations_pptx(payload: dict[str, Any]) -> io.BytesIO:
     summary = payload.get("summary", "")
     recs = payload.get("recommendations", [])
 
-    prs = _new_deck(f"关联图 · {topic}", "QCKit · Relations Diagram")
+    prs = _new_deck(f"关联图 · {topic}", "QCKit · Relations Diagram · 左→右 因果流向")
     slide = prs.slides[0]
 
-    # 布局: 力导圆环 —— 简易环形位置计算
-    cx, cy = Inches(6.8), Inches(4.2)
-    radius_x, radius_y = Inches(4.2), Inches(2.5)
-    n = max(1, len(nodes))
-    positions: dict[str, tuple[Emu, Emu]] = {}
+    layout = _relations_layout(nodes, edges)
+    positions = layout["positions"]
+    indeg, outdeg = layout["indeg"], layout["outdeg"]
 
-    # core 放中心, 其他环绕
-    core_ids = [x["id"] for x in nodes if x.get("role") == "core"]
-    others = [x for x in nodes if x.get("role") != "core"]
-
-    if core_ids:
-        # 多个 core 时垂直排列在中心
-        for i, cid in enumerate(core_ids):
-            offset = (i - (len(core_ids) - 1) / 2) * Inches(1.0)
-            positions[cid] = (cx, cy + offset)
-    ring_n = max(1, len(others))
-    for i, node in enumerate(others):
-        ang = 2 * math.pi * i / ring_n - math.pi / 2
-        positions[node["id"]] = (cx + int(radius_x * math.cos(ang)),
-                                 cy + int(radius_y * math.sin(ang)))
+    # 三列标题条 & 底色带
+    col_titles = [("一般 / 传导原因", "94A3B8"),
+                  ("关键节点 (Key)",  "F59E0B"),
+                  ("核心问题 (Core)", "DC2626")]
+    for ci, (title, color) in enumerate(col_titles):
+        x = layout["col_xs"][ci] - Inches(1.6)
+        band = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                      x, Inches(1.0), Inches(3.2), Inches(0.32))
+        band.fill.solid(); band.fill.fore_color.rgb = _rgb(color)
+        band.line.fill.background()
+        _set_text(band.text_frame, title, size=11, bold=True, color="FFFFFF")
 
     # 画节点
     node_shapes: dict[str, Any] = {}
     for node in nodes:
         role = node.get("role", "normal")
         c = ROLE_COLORS.get(role, ROLE_COLORS["normal"])
-        label = node.get("label", "")
-        w = Inches(max(1.4, min(2.6, 0.28 * len(label) + 0.6)))
-        h = Inches(0.55 if role != "core" else 0.65)
-        x0, y0 = positions[node["id"]]
+        raw = node.get("label", "")
+        label = raw if len(raw) <= 14 else raw[:13] + "…"
+        w = Inches(2.6 if role == "core" else 2.4)
+        h = Inches(0.75 if role == "core" else 0.6)
+        x0, y0 = positions.get(node["id"], (Inches(6.7), Inches(4.2)))
         shp = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
                                      x0 - w // 2, y0 - h // 2, w, h)
         shp.fill.solid(); shp.fill.fore_color.rgb = _rgb(c["bg"])
         shp.line.color.rgb = _rgb(c["border"])
-        shp.line.width = Pt(1.5 if role != "core" else 2.5)
+        shp.line.width = Pt(2.5 if role == "core" else (1.75 if role == "key" else 1.0))
         _set_text(shp.text_frame, label,
-                  size=13 if role != "core" else 14,
+                  size=13 if role == "core" else 11,
                   bold=(role in ("core", "key")),
                   color=c["text"])
         node_shapes[node["id"]] = shp
+        # 度数小徽章 (in↓ / out↑)
+        deg_txt = f"↓{indeg[node['id']]}  ↑{outdeg[node['id']]}"
+        badge = slide.shapes.add_textbox(
+            x0 - w // 2, y0 + h // 2 + Inches(0.02), w, Inches(0.22))
+        _set_text(badge.text_frame, deg_txt, size=8, color="64748B")
 
-    # 画边 (直线连接) - python-pptx 的 connector 需要重新算 begin/end,
-    # 更稳妥直接用 LINE 形状
+    # 画边 —— 起点从形状右缘、终点从形状左缘, 更像流向
     for e in edges:
-        s, t = node_shapes.get(e["source"]), node_shapes.get(e["target"])
+        s = node_shapes.get(e["source"]); t = node_shapes.get(e["target"])
         if not s or not t:
             continue
-        sx = s.left + s.width // 2
+        sx = s.left + s.width           # 右缘
         sy = s.top + s.height // 2
-        tx = t.left + t.width // 2
+        tx = t.left                     # 左缘
         ty = t.top + t.height // 2
+        # 反向连接 (右列指左列) 时改用中心, 避免穿透
+        if tx < sx:
+            sx = s.left + s.width // 2
+            tx = t.left + t.width // 2
         conn = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, sx, sy, tx, ty)
         strength = int(e.get("strength", 1) or 1)
-        conn.line.color.rgb = _rgb("64748B" if strength >= 3 else "94A3B8")
-        conn.line.width = Pt(1.0 + 0.7 * strength)
-        # 箭头
+        conn.line.color.rgb = _rgb("DC2626" if strength >= 3
+                                   else "F59E0B" if strength == 2 else "94A3B8")
+        conn.line.width = Pt(0.75 + 0.6 * strength)
         line = conn.line._get_or_add_ln()
         from pptx.oxml.ns import qn
         from lxml import etree
         tail = etree.SubElement(line, qn("a:tailEnd"))
         tail.set("type", "triangle")
-        # 边标签 (小文本框在中点)
         lbl = e.get("label", "")
         if lbl:
             tb = slide.shapes.add_textbox(
-                (sx + tx) // 2 - Inches(0.5), (sy + ty) // 2 - Inches(0.15),
-                Inches(1.0), Inches(0.3))
+                (sx + tx) // 2 - Inches(0.55), (sy + ty) // 2 - Inches(0.14),
+                Inches(1.1), Inches(0.28))
             tb.fill.solid(); tb.fill.fore_color.rgb = _rgb("FFFFFF")
             tb.line.color.rgb = _rgb("E2E8F0")
-            _set_text(tb.text_frame, lbl, size=9, color="475569")
+            _set_text(tb.text_frame, lbl if len(lbl) <= 10 else lbl[:9] + "…",
+                      size=9, color="475569")
 
-    # ============= 第二页: 解读 & 建议 =============
+    # ============= 第二页: 出度/入度分析 =============
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                  Inches(0), Inches(0),
+                                  prs.slide_width, Inches(0.6))
+    hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("0F172A")
+    hdr.line.fill.background()
+    _set_text(hdr.text_frame, f"出度 / 入度分析 · {topic}",
+              size=18, bold=True, color="FFFFFF", align=PP_ALIGN.LEFT)
+    hdr.text_frame.margin_left = Inches(0.3)
+    stf = slide2.shapes.add_textbox(Inches(0.3), Inches(0.65),
+                                    Inches(13), Inches(0.35)).text_frame
+    _set_text(stf,
+              "出度=该节点向外传导的因果条数 (驱动力) · 入度=被指向的条数 (被影响程度)",
+              size=11, color="64748B", align=PP_ALIGN.LEFT)
+
+    # 排序: 按 总度 降序取 Top 8
+    ranked = sorted(nodes,
+                    key=lambda x: -(indeg[x["id"]] + outdeg[x["id"]]))[:8]
+    driver = max(nodes, key=lambda x: outdeg[x["id"]], default=None)
+    outcome = max(nodes, key=lambda x: indeg[x["id"]], default=None)
+
+    # 左: 结论卡片
+    left = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                   Inches(0.4), Inches(1.15),
+                                   Inches(4.4), Inches(5.9))
+    left.fill.solid(); left.fill.fore_color.rgb = _rgb("F8FAFC")
+    left.line.color.rgb = _rgb("2563EB"); left.line.width = Pt(2)
+    tf = left.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0.25)
+    tf.margin_top = Inches(0.25)
+    _set_text(tf, "🎯 关键节点识别", size=15, bold=True,
+              color="1E40AF", align=PP_ALIGN.LEFT)
+
+    def _add_conclusion(label, node, color, tip):
+        if not node: return
+        p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT; p.space_before = Pt(14)
+        r = p.add_run(); r.text = label
+        r.font.name = FONT; r.font.size = Pt(12); r.font.bold = True
+        r.font.color.rgb = _rgb(color)
+        p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.LEFT
+        r2 = p2.add_run()
+        r2.text = f"  {node.get('label','')} (出{outdeg[node['id']]} / 入{indeg[node['id']]})"
+        r2.font.name = FONT; r2.font.size = Pt(13); r2.font.bold = True
+        r2.font.color.rgb = _rgb("0F172A")
+        p3 = tf.add_paragraph(); p3.alignment = PP_ALIGN.LEFT
+        r3 = p3.add_run(); r3.text = f"  {tip}"
+        r3.font.name = FONT; r3.font.size = Pt(11); r3.font.color.rgb = _rgb("475569")
+
+    _add_conclusion("🚀 驱动节点 (最大出度)", driver, "059669",
+                    "推动力最强 → 优先改善此处能同时缓解多个下游问题")
+    _add_conclusion("🎯 结果节点 (最大入度)", outcome, "DC2626",
+                    "汇聚多条因果链 → 通常是需要监控的核心 KPI")
+    _add_conclusion("📊 全局统计", None, "1E40AF", "")
+    p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT
+    r = p.add_run()
+    r.text = f"  节点 {len(nodes)} 个 · 因果边 {len(edges)} 条 · 平均度 {round(2 * len(edges) / max(1, len(nodes)), 1)}"
+    r.font.name = FONT; r.font.size = Pt(11); r.font.color.rgb = _rgb("334155")
+
+    # 右: 度数条形图 (Top 8, 出度绿+入度蓝 堆叠)
+    box_x, box_y = Inches(5.05), Inches(1.15)
+    box_w, box_h = Inches(7.9), Inches(5.9)
+    box = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                  box_x, box_y, box_w, box_h)
+    box.fill.solid(); box.fill.fore_color.rgb = _rgb("FFFFFF")
+    box.line.color.rgb = _rgb("E5E7EB")
+    _set_text(box.text_frame, "🏆 度数 Top 8 (出度 + 入度)",
+              size=13, bold=True, color="0F172A", align=PP_ALIGN.LEFT)
+    box.text_frame.margin_left = Inches(0.25)
+    box.text_frame.margin_top = Inches(0.2)
+
+    max_deg = max((outdeg[n["id"]] + indeg[n["id"]] for n in ranked), default=1) or 1
+    row_h = Inches(0.55)
+    bar_area_x = box_x + Inches(2.6)
+    bar_area_w = Inches(4.6)
+    for i, node in enumerate(ranked):
+        row_y = box_y + Inches(0.75) + i * row_h
+        # 节点标签
+        nl = slide2.shapes.add_textbox(box_x + Inches(0.15), row_y,
+                                       Inches(2.4), Inches(0.4))
+        label = node.get("label", "")
+        _set_text(nl.text_frame, label if len(label) <= 12 else label[:11] + "…",
+                  size=11, bold=True, color="1E293B", align=PP_ALIGN.LEFT)
+
+        out_v = outdeg[node["id"]]; in_v = indeg[node["id"]]
+        out_w = int(bar_area_w * out_v / max_deg) if max_deg else 0
+        in_w  = int(bar_area_w * in_v  / max_deg) if max_deg else 0
+        # 出度条 (绿, 左)
+        if out_w > 0:
+            b1 = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                          bar_area_x, row_y + Inches(0.08),
+                                          out_w, Inches(0.32))
+            b1.fill.solid(); b1.fill.fore_color.rgb = _rgb("10B981")
+            b1.line.fill.background()
+        # 入度条 (蓝, 紧接右)
+        if in_w > 0:
+            b2 = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                          bar_area_x + out_w, row_y + Inches(0.08),
+                                          in_w, Inches(0.32))
+            b2.fill.solid(); b2.fill.fore_color.rgb = _rgb("3B82F6")
+            b2.line.fill.background()
+        # 数值标签
+        vtxt = slide2.shapes.add_textbox(
+            bar_area_x + out_w + in_w + Inches(0.05),
+            row_y + Inches(0.05), Inches(1.2), Inches(0.35))
+        _set_text(vtxt.text_frame, f"↑{out_v}  ↓{in_v}",
+                  size=10, color="334155", align=PP_ALIGN.LEFT)
+
+    # 图例
+    lg_y = box_y + box_h - Inches(0.4)
+    lg1 = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                  box_x + Inches(0.25), lg_y,
+                                  Inches(0.2), Inches(0.2))
+    lg1.fill.solid(); lg1.fill.fore_color.rgb = _rgb("10B981"); lg1.line.fill.background()
+    t1 = slide2.shapes.add_textbox(box_x + Inches(0.5), lg_y - Inches(0.02),
+                                   Inches(1.5), Inches(0.25))
+    _set_text(t1.text_frame, "↑ 出度 (驱动)", size=10, color="065F46", align=PP_ALIGN.LEFT)
+    lg2 = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                  box_x + Inches(2.0), lg_y,
+                                  Inches(0.2), Inches(0.2))
+    lg2.fill.solid(); lg2.fill.fore_color.rgb = _rgb("3B82F6"); lg2.line.fill.background()
+    t2 = slide2.shapes.add_textbox(box_x + Inches(2.25), lg_y - Inches(0.02),
+                                   Inches(1.5), Inches(0.25))
+    _set_text(t2.text_frame, "↓ 入度 (被影响)", size=10, color="1E40AF", align=PP_ALIGN.LEFT)
+
+    # ============= 第三页: 解读 & 建议 (原来的第二页) =============
     if summary or recs:
-        slide2 = prs.slides.add_slide(prs.slide_layouts[6])
-        hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+        slide3 = prs.slides.add_slide(prs.slide_layouts[6])
+        hdr = slide3.shapes.add_shape(MSO_SHAPE.RECTANGLE,
                                       Inches(0), Inches(0),
                                       prs.slide_width, Inches(0.6))
         hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("0F172A")
@@ -170,8 +339,7 @@ def build_relations_pptx(payload: dict[str, Any]) -> io.BytesIO:
                   color="FFFFFF", align=PP_ALIGN.LEFT)
         hdr.text_frame.margin_left = Inches(0.3)
 
-        # 左: 整体解读
-        left = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+        left = slide3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
                                        Inches(0.4), Inches(1.0),
                                        Inches(6.2), Inches(5.8))
         left.fill.solid(); left.fill.fore_color.rgb = _rgb("F8FAFC")
@@ -182,16 +350,11 @@ def build_relations_pptx(payload: dict[str, Any]) -> io.BytesIO:
         tf.margin_top = Inches(0.25)
         _set_text(tf, "📌 整体解读", size=15, bold=True, color="1E40AF",
                   align=PP_ALIGN.LEFT)
-        p = tf.add_paragraph()
-        p.alignment = PP_ALIGN.LEFT
-        run = p.add_run(); run.text = ""
-        p2 = tf.add_paragraph()
-        p2.alignment = PP_ALIGN.LEFT
+        p2 = tf.add_paragraph(); p2.alignment = PP_ALIGN.LEFT
         r = p2.add_run(); r.text = summary
         r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("334155")
 
-        # 右: 改善建议
-        right = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+        right = slide3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
                                         Inches(6.8), Inches(1.0),
                                         Inches(6.1), Inches(5.8))
         right.fill.solid(); right.fill.fore_color.rgb = _rgb("FFFFFF")
