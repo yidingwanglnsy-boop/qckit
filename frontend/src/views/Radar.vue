@@ -208,12 +208,12 @@ import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { analyzeRadar, downloadPptx } from '../api'
 
-const topic = ref('Q3 供应商综合评估')
+const topic = ref('')
 const maxScore = ref(10)
 const weakThreshold = ref(60)  // %
-const dimensions = ref(['交付', '质量', '成本', '服务', '技术'])
+const dimensions = ref([])
 const entities = ref([
-  { name: '供应商 A', scores: [8, 9, 6, 7, 8] },
+  { name: '对象 1', scores: [] },
 ])
 const newDim = ref('')
 const useLlm = ref(false)
@@ -319,18 +319,45 @@ function renderChart() {
   const r = result.value
   chart.setOption({
     tooltip: { trigger: 'item' },
-    legend: { data: r.entities.map(e => e.name), top: 8, textStyle: { fontSize: 12 } },
+    legend: {
+      data: r.entities.map(e => e.name),
+      orient: 'vertical',
+      right: 10, top: 20,
+      textStyle: { fontSize: 12, color: '#334155' },
+      itemGap: 8,
+    },
     radar: {
+      center: ['45%', '52%'],
+      radius: '65%',
       indicator: r.dimensions.map(d => ({ name: d, max: r.max_score })),
       shape: 'polygon',
       splitNumber: 5,
       axisName: { color: '#334155', fontSize: 12, fontWeight: 500 },
+      // 每一圈显示刻度值 (0, 2, 4, 6, 8, 10)
+      axisLabel: {
+        show: true, showMinLabel: false,
+        color: '#94a3b8', fontSize: 10,
+        backgroundColor: 'rgba(255,255,255,.85)',
+        padding: [1, 3], borderRadius: 2,
+      },
+      axisTick: { show: true, length: 3, lineStyle: { color: '#cbd5e1' } },
       splitArea: { areaStyle: { color: ['rgba(148,163,184,.04)','rgba(148,163,184,.08)'] } },
       splitLine: { lineStyle: { color: '#e2e8f0' } },
       axisLine: { lineStyle: { color: '#cbd5e1' } },
     },
     series: [{
       type: 'radar',
+      // 数据点上显示得分
+      label: {
+        show: true,
+        formatter: (p) => p.value,
+        fontSize: 10, fontWeight: 'bold',
+        color: '#0f172a',
+        backgroundColor: 'rgba(255,255,255,.9)',
+        padding: [2, 4], borderRadius: 3,
+        borderWidth: 1, borderColor: 'rgba(148,163,184,.4)',
+      },
+      symbolSize: 6,
       data: r.entities.map((e, i) => ({
         name: e.name, value: e.scores,
         lineStyle: { color: COLORS[i % COLORS.length], width: 2 },

@@ -642,3 +642,112 @@ def build_radar_pptx(payload: dict[str, Any]) -> io.BytesIO:
 
     buf = io.BytesIO(); prs.save(buf); buf.seek(0)
     return buf
+
+
+
+# ─────────────────────────────────────────────────────────
+# 5W2H - Why 居中, 其他 6 项环绕放射
+# ─────────────────────────────────────────────────────────
+def build_w5h2_pptx(payload: dict[str, Any]) -> io.BytesIO:
+    topic = payload.get("topic", "5W2H")
+    inferred = set(payload.get("inferred", []))
+    reasoning = payload.get("reasoning", "")
+
+    prs = _new_deck(f"5W2H · {topic}", "QCKit · 5W2H 分析法")
+    slide = prs.slides[0]
+
+    # 中心 Why 卡 (红色, 突出根因)
+    cw, ch = Inches(4.2), Inches(1.9)
+    cx = (prs.slide_width - cw) / 2
+    cy = (prs.slide_height - ch) / 2
+    why_card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, cx, cy, cw, ch)
+    why_card.fill.solid(); why_card.fill.fore_color.rgb = _rgb("DC2626")
+    why_card.line.color.rgb = _rgb("991B1B"); why_card.line.width = Pt(2.5)
+    tf = why_card.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = Inches(0.2)
+    tf.margin_top = Inches(0.15)
+    _set_text(tf, "❓ Why · 根本原因", size=13, bold=True, color="FEE2E2",
+              align=PP_ALIGN.CENTER)
+    p = tf.add_paragraph(); p.alignment = PP_ALIGN.CENTER
+    p.space_before = Pt(6)
+    r = p.add_run(); r.text = payload.get("why", "")
+    r.font.name = FONT; r.font.size = Pt(14); r.font.bold = True
+    r.font.color.rgb = _rgb("FFFFFF")
+
+    # 6 个外围卡片位置: 上左/上右/中左/中右/下左/下右
+    W, H = Inches(3.8), Inches(1.75)
+    slots = [
+        ("what",     Inches(0.4),                  Inches(0.9),
+         "❔ What",   "问题现象",     "0284C7"),
+        ("where",    prs.slide_width - W - Inches(0.4), Inches(0.9),
+         "📍 Where",  "地点/环节",   "059669"),
+        ("who",      Inches(0.4),                  Inches(2.85),
+         "👤 Who",    "责任人",       "7C3AED"),
+        ("when",     prs.slide_width - W - Inches(0.4), Inches(2.85),
+         "⏰ When",   "时间节点",     "DB2777"),
+        ("how",      Inches(0.4),                  Inches(4.8),
+         "🛠 How",    "对策/措施",   "0891B2"),
+        ("how_much", prs.slide_width - W - Inches(0.4), Inches(4.8),
+         "💰 How Much","成本/目标",   "F59E0B"),
+    ]
+
+    for field, x, y, title, sub, color in slots:
+        val = payload.get(field, "") or "(未填)"
+        is_ai = field in inferred
+        card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, W, H)
+        card.fill.solid()
+        card.fill.fore_color.rgb = _rgb("FFFBEB" if is_ai else "F8FAFC")
+        card.line.color.rgb = _rgb(color); card.line.width = Pt(1.5)
+        tf = card.text_frame
+        tf.word_wrap = True
+        tf.margin_left = tf.margin_right = Inches(0.15)
+        tf.margin_top = Inches(0.1)
+        # 标题
+        _set_text(tf, f"{title}  ·  {sub}", size=11, bold=True,
+                  color=color, align=PP_ALIGN.LEFT)
+        # AI 补全标记
+        if is_ai:
+            p_tag = tf.add_paragraph(); p_tag.alignment = PP_ALIGN.LEFT
+            r_tag = p_tag.add_run()
+            r_tag.text = "🤖 AI 推理补全"
+            r_tag.font.name = FONT; r_tag.font.size = Pt(8)
+            r_tag.font.color.rgb = _rgb("B45309"); r_tag.font.italic = True
+        # 内容
+        p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT
+        p.space_before = Pt(4)
+        r = p.add_run(); r.text = val
+        r.font.name = FONT; r.font.size = Pt(12)
+        r.font.color.rgb = _rgb("1F2937")
+
+    # 第二页: 推理逻辑 (若有)
+    if reasoning:
+        slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+        hdr = slide2.shapes.add_shape(MSO_SHAPE.RECTANGLE,
+                                      Inches(0), Inches(0),
+                                      prs.slide_width, Inches(0.6))
+        hdr.fill.solid(); hdr.fill.fore_color.rgb = _rgb("0F172A")
+        hdr.line.fill.background()
+        _set_text(hdr.text_frame, f"AI 推理逻辑 · {topic}", size=18, bold=True,
+                  color="FFFFFF", align=PP_ALIGN.LEFT)
+        hdr.text_frame.margin_left = Inches(0.3)
+
+        box = slide2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                       Inches(0.5), Inches(1.0),
+                                       prs.slide_width - Inches(1.0),
+                                       Inches(5.8))
+        box.fill.solid(); box.fill.fore_color.rgb = _rgb("FFFBEB")
+        box.line.color.rgb = _rgb("F59E0B"); box.line.width = Pt(2)
+        tf = box.text_frame
+        tf.word_wrap = True
+        tf.margin_left = tf.margin_right = Inches(0.3)
+        tf.margin_top = Inches(0.25)
+        _set_text(tf, "🤖 推理", size=14, bold=True, color="B45309",
+                  align=PP_ALIGN.LEFT)
+        p = tf.add_paragraph(); p.alignment = PP_ALIGN.LEFT
+        p.space_before = Pt(8)
+        r = p.add_run(); r.text = reasoning
+        r.font.name = FONT; r.font.size = Pt(13); r.font.color.rgb = _rgb("451A03")
+
+    buf = io.BytesIO(); prs.save(buf); buf.seek(0)
+    return buf

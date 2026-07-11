@@ -5,11 +5,13 @@ from fastapi.responses import StreamingResponse
 
 from ..core.registry import all_tools
 from ..core.pptx_export import (build_affinity_pptx, build_pareto_pptx,
-                                build_radar_pptx, build_relations_pptx)
+                                build_radar_pptx, build_relations_pptx,
+                                build_w5h2_pptx)
 from ..tools.affinity import AffinityRequest, analyze as affinity_analyze
 from ..tools.pareto import ParetoRequest, analyze as pareto_analyze
 from ..tools.radar import RadarRequest, analyze as radar_analyze
 from ..tools.relations import RelationsRequest, analyze as relations_analyze
+from ..tools.w5h2 import W5H2Request, analyze as w5h2_analyze
 
 router = APIRouter(prefix="/api/tools", tags=["tools"])
 
@@ -81,3 +83,15 @@ def radar_export_pptx(payload: dict):
     buf = build_radar_pptx(payload)
     topic = payload.get("topic", "雷达图")
     return _pptx_response(buf, f"雷达图_{topic}.pptx")
+
+
+@router.post("/w5h2/analyze")
+def w5h2_endpoint(req: W5H2Request):
+    return _run(w5h2_analyze, req)
+
+
+@router.post("/w5h2/export/pptx")
+def w5h2_export_pptx(payload: dict):
+    buf = build_w5h2_pptx(payload)
+    topic = payload.get("topic", "5W2H")
+    return _pptx_response(buf, f"5W2H_{topic}.pptx")

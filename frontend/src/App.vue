@@ -35,6 +35,9 @@
           <el-menu-item index="/tools/radar">
             <el-icon><Aim /></el-icon>雷达图
           </el-menu-item>
+          <el-menu-item index="/tools/w5h2">
+            <el-icon><Grid /></el-icon>5W2H 分析
+          </el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon><span>LLM 配置</span>
@@ -45,7 +48,11 @@
       </div>
     </el-aside>
     <el-main style="padding: 24px;">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
     </el-main>
   </el-container>
 </template>
