@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent  # 仓库根
+ROOT = Path(__file__).resolve().parent   # 仓库根 (脚本就在根目录)
 BACKEND = ROOT / "backend"
 FRONT_DIST = BACKEND / "static"
 ASSETS = ROOT / "assets"
