@@ -5,6 +5,9 @@ on:
     tags: ['v*']
   workflow_dispatch:   # 手动触发用于测试
 
+permissions:
+  contents: write   # 发 Release 需要
+
 jobs:
   build-windows:
     runs-on: windows-latest
