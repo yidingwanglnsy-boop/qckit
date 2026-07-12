@@ -23,10 +23,10 @@ DIST = ROOT / "dist"
 def check_prereqs() -> None:
     if not FRONT_DIST.exists() or not (FRONT_DIST / "index.html").exists():
         sys.exit(
-            "[错误] 前端未构建, 缺 backend/static/index.html\n"
-            "请先: cd frontend && npm ci && npm run build")
+            "[ERROR] frontend not built: missing backend/static/index.html\n"
+            "run first: cd frontend && npm ci && npm run build")
     if not (ASSETS / "qckit.ico").exists():
-        sys.exit(f"[错误] 缺图标 {ASSETS / 'qckit.ico'}")
+        sys.exit(f"[ERROR] missing icon {ASSETS / 'qckit.ico'}")
 
 
 def build() -> None:
@@ -58,7 +58,7 @@ def build() -> None:
     ]
     print("[build] $ " + " ".join(cmd))
     subprocess.run(cmd, check=True, cwd=str(BACKEND))
-    print(f"\n✓ 构建完成: {DIST / 'QCKit.exe'}")
+    print(f"\n[OK] build done: {DIST / 'QCKit.exe'}")
 
 
 if __name__ == "__main__":
