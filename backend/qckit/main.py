@@ -36,7 +36,13 @@ def health():
 
 
 # 生产模式：如果 backend/static 存在（构建好的前端），一并托管
-STATIC_DIR = Path(__file__).parent.parent / "static"
+# PyInstaller 打包后资源在 sys._MEIPASS/backend/static, 开发时在 backend/static
+import sys as _sys
+_MEI = getattr(_sys, "_MEIPASS", None)
+if _MEI:
+    STATIC_DIR = Path(_MEI) / "backend" / "static"
+else:
+    STATIC_DIR = Path(__file__).parent.parent / "static"
 if STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
