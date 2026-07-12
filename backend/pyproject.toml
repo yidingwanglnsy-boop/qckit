@@ -17,6 +17,17 @@ dependencies = [
     "openpyxl>=3.1.0",
 ]
 
+[project.optional-dependencies]
+desktop = [
+    "pystray>=0.19",
+    "pillow>=10",
+]
+build = [
+    "pyinstaller>=6.0",
+    "pystray>=0.19",
+    "pillow>=10",
+]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

@@ -1,4 +1,13 @@
-version: "3.9"
+# QCKit —— 一键本地部署
+#
+# 用法（Linux/Mac/Windows Docker Desktop 通用）：
+#   docker compose up -d          # 后台启动
+#   docker compose down           # 停止
+#   docker compose logs -f qckit  # 看日志
+#
+# 首次启动后浏览器打开 http://localhost:8000
+# 数据（配置/项目/历史）保存在同目录的 ./data/ 中，删除容器不会丢
+
 services:
   qckit:
     build: .
