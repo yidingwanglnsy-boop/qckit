@@ -47,31 +47,9 @@
 
 ## 🚀 快速开始
 
-### 方式 A：Windows 用户 · Docker Desktop 一键启动 ⭐
+### 方式 A：Docker 一键启动（推荐）
 
-**前置**：装 [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
-
-```
-1. 下载/克隆本仓库
-2. 双击 qckit-start.bat
-3. 浏览器自动打开 http://localhost:8000
-```
-
-停止：双击 `qckit-stop.bat`。数据保存在同目录 `data\` 文件夹，删容器不会丢。
-
-### 方式 B：Windows 用户 · 单文件 exe（无需装 Docker）
-
-从 [Releases](https://github.com/yidingwanglnsy-boop/qckit/releases) 下载 `QCKit.exe`：
-
-```
-1. 双击 QCKit.exe (首次可能被 SmartScreen 拦, 点「仍要运行」)
-2. 右下角出 QCKit 托盘图标 · 浏览器自动打开
-3. 用完右键托盘图标 → 退出 QCKit
-```
-
-数据在 `%USERPROFILE%\.qckit\` 下。
-
-### 方式 C：Linux/Mac · Docker
+**前置**：装 [Docker Desktop](https://www.docker.com/products/docker-desktop)（Windows/Mac）或 docker + docker compose（Linux）
 
 ```bash
 git clone https://github.com/yidingwanglnsy-boop/qckit.git
@@ -80,7 +58,9 @@ docker compose up -d
 # 打开 http://localhost:8000，在「大模型 API」页跟着 3 步向导配置
 ```
 
-### 方式 D：本地开发（前后端分离）
+停止：`docker compose down`（Windows 可双击 `qckit-stop.bat`）。数据保存在同目录 `data/` 文件夹，删容器不会丢。
+
+### 方式 B：本地开发（前后端分离）
 
 ```bash
 # 后端
